@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/VaalaCat/frp-panel/conf"
-	"github.com/VaalaCat/frp-panel/pb"
-	"github.com/VaalaCat/frp-panel/utils/logger"
+	"github.com/yunj-yun/frp-web-panel/conf"
+	"github.com/yunj-yun/frp-web-panel/pb"
+	"github.com/yunj-yun/frp-web-panel/utils/logger"
 	"github.com/casbin/casbin/v2"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/credentials"

@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/VaalaCat/frp-panel/defs"
-	"github.com/VaalaCat/frp-panel/models"
+	"github.com/yunj-yun/frp-web-panel/defs"
+	"github.com/yunj-yun/frp-web-panel/models"
 )
 
 func GetUserInfo(c context.Context) models.UserInfo {

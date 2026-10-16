@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/VaalaCat/frp-panel/models"
-	"github.com/VaalaCat/frp-panel/pb"
-	"github.com/VaalaCat/frp-panel/utils"
+	"github.com/yunj-yun/frp-web-panel/models"
+	"github.com/yunj-yun/frp-web-panel/pb"
+	"github.com/yunj-yun/frp-web-panel/utils"
 	v1 "github.com/fatedier/frp/pkg/config/v1"
 	"github.com/samber/lo"
 	"github.com/sourcegraph/conc/pool"

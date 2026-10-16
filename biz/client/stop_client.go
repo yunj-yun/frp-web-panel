@@ -1,9 +1,9 @@
 package client
 
 import (
-	"github.com/VaalaCat/frp-panel/pb"
-	"github.com/VaalaCat/frp-panel/services/app"
-	"github.com/VaalaCat/frp-panel/utils/logger"
+	"github.com/yunj-yun/frp-web-panel/pb"
+	"github.com/yunj-yun/frp-web-panel/services/app"
+	"github.com/yunj-yun/frp-web-panel/utils/logger"
 )
 
 func StopFRPCHandler(ctx *app.Context, req *pb.StopFRPCRequest) (*pb.StopFRPCResponse, error) {

@@ -8,7 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 
-	"github.com/VaalaCat/frp-panel/utils/logger"
+	"github.com/yunj-yun/frp-web-panel/utils/logger"
 	"google.golang.org/grpc/credentials"
 )
 

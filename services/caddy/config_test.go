@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/VaalaCat/frp-panel/models"
+	"github.com/yunj-yun/frp-web-panel/models"
 )
 
 func TestRenderGatewayCaddyfileDeterministicAndPreservesHost(t *testing.T) {

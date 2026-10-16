@@ -8,7 +8,7 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/VaalaCat/frp-panel/utils/logger"
+	"github.com/yunj-yun/frp-web-panel/utils/logger"
 	"github.com/kardianos/service"
 )
 
@@ -48,7 +48,7 @@ func CreateSystemServiceWithOptions(svcName string, args []string, run func(), o
 	svcConfig := &service.Config{
 		Name:             svcName,
 		DisplayName:      "frp-panel",
-		Description:      "this is frp-panel service, developed by [VaalaCat] - https://github.com/VaalaCat/frp-panel",
+		Description:      "FRP Web Panel service - https://github.com/yunj-yun/frp-web-panel",
 		Arguments:        args,
 		WorkingDirectory: path.Dir(currentPath),
 		Option:           options,

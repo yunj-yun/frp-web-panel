@@ -18,7 +18,7 @@ func buildDownloadURL(opt Options) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	url := fmt.Sprintf("https://github.com/VaalaCat/frp-panel/releases/download/%s/%s", version, asset)
+	url := fmt.Sprintf("https://github.com/yunj-yun/frp-web-panel/releases/download/%s/%s", version, asset)
 	if opt.UseGithubProxy && len(strings.TrimSpace(opt.GithubProxy)) > 0 {
 		url = fmt.Sprintf("%s/%s", strings.TrimRight(strings.TrimSpace(opt.GithubProxy), "/"), url)
 	}

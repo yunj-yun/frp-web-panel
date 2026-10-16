@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/VaalaCat/frp-panel/defs"
+	"github.com/yunj-yun/frp-web-panel/defs"
 	"gorm.io/gorm"
 )
 

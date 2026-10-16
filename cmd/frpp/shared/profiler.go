@@ -9,9 +9,9 @@ import (
 	"net/http/pprof"
 	"time"
 
-	"github.com/VaalaCat/frp-panel/conf"
-	"github.com/VaalaCat/frp-panel/services/app"
-	"github.com/VaalaCat/frp-panel/utils/logger"
+	"github.com/yunj-yun/frp-web-panel/conf"
+	"github.com/yunj-yun/frp-web-panel/services/app"
+	"github.com/yunj-yun/frp-web-panel/utils/logger"
 	"go.uber.org/fx"
 )
 

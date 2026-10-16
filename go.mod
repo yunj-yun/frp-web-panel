@@ -1,4 +1,4 @@
-module github.com/VaalaCat/frp-panel
+module github.com/yunj-yun/frp-web-panel
 
 go 1.24.0
 

@@ -3,7 +3,7 @@ package rbac
 import (
 	"fmt"
 
-	"github.com/VaalaCat/frp-panel/defs"
+	"github.com/yunj-yun/frp-web-panel/defs"
 	"github.com/casbin/casbin/v2"
 )
 

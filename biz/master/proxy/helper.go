@@ -3,13 +3,13 @@ package proxy
 import (
 	"errors"
 
-	"github.com/VaalaCat/frp-panel/biz/master/client"
-	"github.com/VaalaCat/frp-panel/common"
-	"github.com/VaalaCat/frp-panel/models"
-	"github.com/VaalaCat/frp-panel/pb"
-	"github.com/VaalaCat/frp-panel/services/app"
-	"github.com/VaalaCat/frp-panel/services/dao"
-	"github.com/VaalaCat/frp-panel/utils/logger"
+	"github.com/yunj-yun/frp-web-panel/biz/master/client"
+	"github.com/yunj-yun/frp-web-panel/common"
+	"github.com/yunj-yun/frp-web-panel/models"
+	"github.com/yunj-yun/frp-web-panel/pb"
+	"github.com/yunj-yun/frp-web-panel/services/app"
+	"github.com/yunj-yun/frp-web-panel/services/dao"
+	"github.com/yunj-yun/frp-web-panel/utils/logger"
 	"github.com/samber/lo"
 	"gorm.io/gorm"
 )

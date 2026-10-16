@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/VaalaCat/frp-panel/cmd/frpp/shared"
-	"github.com/VaalaCat/frp-panel/conf"
-	"github.com/VaalaCat/frp-panel/utils/logger"
+	"github.com/yunj-yun/frp-web-panel/cmd/frpp/shared"
+	"github.com/yunj-yun/frp-web-panel/conf"
+	"github.com/yunj-yun/frp-web-panel/utils/logger"
 	"github.com/fatedier/golib/crypto"
 	"github.com/spf13/cobra"
 )

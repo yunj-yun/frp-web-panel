@@ -153,7 +153,7 @@ export const WindowsInstallCommand = <T extends Client | Server>(
     `[Net.SecurityProtocolType]::Tls -bor ` +
     `[Net.SecurityProtocolType]::Tls11 -bor ` +
     `[Net.SecurityProtocolType]::Tls12;set-ExecutionPolicy RemoteSigned;` +
-    `Invoke-WebRequest ${github_proxy ? proxyUrl : ''}https://raw.githubusercontent.com/VaalaCat/frp-panel/main/install.ps1 ` +
+    `Invoke-WebRequest ${github_proxy ? proxyUrl : ''}https://raw.githubusercontent.com/yunj-yun/frp-web-panel/main/install.ps1 ` +
     `-OutFile C:\install.ps1;powershell.exe C:\install.ps1 ${ExecCommandStr(type, item, info, ' ', applyPref)}`
   )
 }
@@ -166,7 +166,7 @@ export const LinuxInstallCommand = <T extends Client | Server>(
   applyPref = true,
 ) => {
   const proxyUrl = getGithubProxyUrl(info, applyPref)
-  return `curl -fSL ${github_proxy ? proxyUrl : ''}https://raw.githubusercontent.com/VaalaCat/frp-panel/main/install.sh | bash -s -- ${github_proxy ? `--github-proxy ${proxyUrl}` : ''
+  return `curl -fSL ${github_proxy ? proxyUrl : ''}https://raw.githubusercontent.com/yunj-yun/frp-web-panel/main/install.sh | bash -s -- ${github_proxy ? `--github-proxy ${proxyUrl}` : ''
     }${ExecCommandStr(type, item, info, ' ', applyPref)}`
 }
 
@@ -197,8 +197,8 @@ export const DockerComposeFile = (
     getClientRpcUrl(info, applyPref),
   ].map((argument) => argument.replace(/\$/g, '$$$$'))
   const serviceName = type === 'client' ? 'frp-panel-client' : 'frp-panel-server'
-  const imageTag = info.imageTag || 'alpha'
-  const compose = `services:\n  ${serviceName}:\n    image: vaalacat/frp-panel:${imageTag}\n    container_name: ${serviceName}\n    network_mode: host\n    restart: unless-stopped\n    command: ${JSON.stringify(command)}`
+  const imageTag = info.imageTag || 'latest'
+  const compose = `services:\n  ${serviceName}:\n    image: ghcr.io/yunj-yun/frp-web-panel:${imageTag}\n    container_name: ${serviceName}\n    network_mode: host\n    restart: unless-stopped\n    command: ${JSON.stringify(command)}`
 
   // Caddy shares the Server host network so it can own the public HTTP/HTTPS
   // listeners directly. The config and storage directories are persisted next

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/VaalaCat/frp-panel/defs"
-	"github.com/VaalaCat/frp-panel/models"
-	"github.com/VaalaCat/frp-panel/services/app"
-	"github.com/VaalaCat/frp-panel/services/dao"
+	"github.com/yunj-yun/frp-web-panel/defs"
+	"github.com/yunj-yun/frp-web-panel/models"
+	"github.com/yunj-yun/frp-web-panel/services/app"
+	"github.com/yunj-yun/frp-web-panel/services/dao"
 	v1 "github.com/fatedier/frp/pkg/config/v1"
 )
 

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/VaalaCat/frp-panel/utils"
-	"github.com/VaalaCat/frp-panel/utils/logger"
+	"github.com/yunj-yun/frp-web-panel/utils"
+	"github.com/yunj-yun/frp-web-panel/utils/logger"
 	"github.com/kardianos/service"
 )
 

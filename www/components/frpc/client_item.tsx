@@ -310,7 +310,7 @@ export const ClientSecret = ({ client }: { client: ClientTableSchema }) => {
               {t('client.start.description')} (
               <a
                 className="text-blue-500"
-                href="https://github.com/VaalaCat/frp-panel/releases"
+                href="https://github.com/yunj-yun/frp-web-panel/releases"
                 target="_blank"
                 rel="noopener noreferrer"
               >

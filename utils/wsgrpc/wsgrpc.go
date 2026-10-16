@@ -250,7 +250,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
 
-	"vaalacat/frp-panel/utils/wsgrpc"
+	"github.com/yunj-yun/frp-web-panel/utils/wsgrpc"
 	"github.com/gorilla/websocket"
 )
 

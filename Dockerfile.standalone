@@ -22,7 +22,7 @@ COPY --from=frontend /app/www/out ./cmd/frpp/out
 ARG VERSION=dev-build
 ARG GIT_COMMIT=unknown
 ARG BUILD_DATE=unknown
-RUN go build -trimpath -ldflags="-s -w -X github.com/VaalaCat/frp-panel/conf.gitVersion=${VERSION} -X github.com/VaalaCat/frp-panel/conf.gitCommit=${GIT_COMMIT} -X github.com/VaalaCat/frp-panel/conf.buildDate=${BUILD_DATE}" -o /app/frp-panel ./cmd/frpp
+RUN go build -trimpath -ldflags="-s -w -X github.com/yunj-yun/frp-web-panel/conf.gitVersion=${VERSION} -X github.com/yunj-yun/frp-web-panel/conf.gitCommit=${GIT_COMMIT} -X github.com/yunj-yun/frp-web-panel/conf.buildDate=${BUILD_DATE}" -o /app/frp-panel ./cmd/frpp
 
 FROM ${RUNTIME_IMAGE}
 WORKDIR /app

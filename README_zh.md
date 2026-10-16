@@ -1,58 +1,28 @@
-# FRP-Panel
+# FRP Web Panel
 
-FRP-Panel 是一款基于 FRP 的可视化管理面板，提供中心化配置、统一凭证、动态调度和边缘 Worker 支持，让内网穿透和服务暴露更简单、更安全、更高效。
+FRP Web Panel 是一个根据实际部署需求从 FRP-Panel 二次开发的自托管 FRP 管理与监控面板，整合节点管理、Docker Compose 生成、端口监测、流量历史、Caddy 证书与运维功能。
 
-[详细使用文档 (Wiki)](https://vaala.cat/frp-panel) | [Frp-panel Blog 开发记录](https://vaala.cat/posts/frp-panel-doc/) | [截图/视频展示](https://vaala.cat/frp-panel/screenshots) | QQ 群：830620423
+## 功能范围
 
-中文文档 | [English](./README.md)
+- 在统一的 Web 界面管理 Master、FRP Server 和 FRP Client 节点。
+- 创建、编辑和删除 TCP、UDP、HTTP、HTTPS 隧道，并支持高级 FRP JSON 配置。
+- 为 Client 和 Server 生成 Docker Compose 文件；Server 节点可同时部署 Caddy。
+- 查看节点状态、版本、心跳、延迟和端口占用快照。
+- 查看隧道实时及历史流量，并按自选日期范围查询。
+- 查看节点实时日志；管理员可按需启用远程终端。
+- 申请和管理证书、自动续期，并将证书部署到指定 Server。
+- 保留 Linux 节点上的 Worker 管理。
 
-<div align="center">
-<a href="https://trendshift.io/repositories/7147" target="_blank"><img src="https://trendshift.io/api/badge/repositories/7147" alt="VaalaCat%2Ffrp-panel | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-</div>
+## Docker 部署
 
+Docker 是主要部署方式。Master 部署脚本会生成随机应用密钥并启动使用 SQLite 的服务。在 Web 界面创建节点后，可将生成的 Compose 文件复制到对应 Linux 设备部署。
 
-## 核心优势
+镜像构建、Master 部署及节点部署步骤见 [Docker 部署说明](./deploy/README_zh.md)。
 
-| 优势                       | 描述                                                         |
-|:--------------------------|:------------------------------------------------------------|
-| 中央化配置                 | 所有客户端/服务端配置由 Master 管理，无需手动编辑 JSON 文件          |
-| 多节点统一管理             | 支持任意数量的 frpc（客户端）与 frps（服务端）节点集中监控与调度     |
-| 可视化界面                 | Web UI 一键创建、编辑、监控隧道和Worker，实时日志与统计一目了然                  |
-| 简化凭证分发               | 自动生成并分发启动命令，无须手动传参             |
-| 边缘 Worker 自部署         | 在 Client 上部署自定义 Worker，Server 将其暴露到公网，Master 可实时调整配置 |
+## 开发说明
 
-## 架构概览
+仓库包含 Go 服务端和 Next.js Web 应用。产品范围与开发记录见 [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) 和 [PROJECT_PLAN.md](./PROJECT_PLAN.md)。
 
-![arch](docs/public/images/arch.png)
+## 上游与许可证
 
-1. **Master** – 集中管理与鉴权，要求所有 Server 和 Client 可访问；
-2. **Server** – 承载业务流量，作为公网入口，为 Client 提供服务；
-3. **Client** – 内网代理，支持部署 Worker；
-
-## 社区与赞助
-
-本项目完全开源，欢迎 Star、Issues、PR。
-若 FRP-Panel 为您带来价值，欢迎赞助作者：
-
--  邮箱：me@vaala.cat
-
-[NodeSupport](https://github.com/NodeSeekDev/NodeSupport) / [林枫云](https://www.dkdun.cn) 赞助了该项目
-
-<div align="left">
-  <a href="https://yxvm.com/">
-    <img src="https://github.com/user-attachments/assets/0bd7087a-7994-4caf-a465-a428af19c5aa" width="300" />
-  </a>
-</div>
-<div align="left">
-  <a href="https://www.dkdun.cn">
-    <img src="https://www.dkdun.cn/themes/web/www/upload/local68c2dbb2ab148.png" width="300" />
-  </a>
-</div>
-
-## 项目状态
-
-[![Star History](https://api.star-history.com/svg?repos=vaalacat/frp-panel&type=Date)](https://www.star-history.com/#vaalacat/frp-panel&Date)
-
----
-
-*更多部署、使用与配置细节，请移步 Wiki → [FRP-Panel WiKi](https://vaala.cat/frp-panel)*
+本项目基于 [VaalaCat/frp-panel](https://github.com/VaalaCat/frp-panel) 二次开发，并保留上游 AGPL-3.0 许可证及版权声明，详见 [LICENSE](./LICENSE)。

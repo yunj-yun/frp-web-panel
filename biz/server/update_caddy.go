@@ -5,9 +5,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/VaalaCat/frp-panel/pb"
-	"github.com/VaalaCat/frp-panel/services/app"
-	"github.com/VaalaCat/frp-panel/services/caddy"
+	"github.com/yunj-yun/frp-web-panel/pb"
+	"github.com/yunj-yun/frp-web-panel/services/app"
+	"github.com/yunj-yun/frp-web-panel/services/caddy"
 )
 
 // UpdateCaddyHandler validates the configuration hash supplied by Master and

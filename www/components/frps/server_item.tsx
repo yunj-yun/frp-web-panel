@@ -287,7 +287,7 @@ export const ServerSecret = ({ server }: { server: ServerTableSchema }) => {
           <div className="space-y-2">
             <h4 className="font-medium leading-none">{t('server.start.title')}</h4>
             <p className="text-sm text-muted-foreground">
-              {t('server.start.description')} (<a className='text-blue-500' href='https://github.com/VaalaCat/frp-panel/releases' target="_blank" rel="noopener noreferrer">{t('common.download')}</a>)
+              {t('server.start.description')} (<a className='text-blue-500' href='https://github.com/yunj-yun/frp-web-panel/releases' target="_blank" rel="noopener noreferrer">{t('common.download')}</a>)
             </p>
           </div>
           <div className="grid gap-2">

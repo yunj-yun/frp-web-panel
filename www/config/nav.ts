@@ -15,7 +15,7 @@ import { ROUTES } from "@/lib/routes"
 
 export const teams = [
   {
-    name: "Frp-Panel",
+    name: "FRP Web Panel",
     logo: TbBuildingTunnel,
     plan: "Community Edition",
     url: "/",

@@ -3,8 +3,8 @@ package main
 import (
 	"embed"
 
-	"github.com/VaalaCat/frp-panel/cmd/frpp/shared"
-	"github.com/VaalaCat/frp-panel/utils/logger"
+	"github.com/yunj-yun/frp-web-panel/cmd/frpp/shared"
+	"github.com/yunj-yun/frp-web-panel/utils/logger"
 	"github.com/fatedier/golib/crypto"
 	"github.com/spf13/cobra"
 )

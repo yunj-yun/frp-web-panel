@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/VaalaCat/frp-panel/models"
+	"github.com/yunj-yun/frp-web-panel/models"
 )
 
 func TestNormalizeDomains(t *testing.T) {

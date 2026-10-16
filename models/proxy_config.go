@@ -3,8 +3,8 @@ package models
 import (
 	"fmt"
 
-	"github.com/VaalaCat/frp-panel/defs"
-	"github.com/VaalaCat/frp-panel/pb"
+	"github.com/yunj-yun/frp-web-panel/defs"
+	"github.com/yunj-yun/frp-web-panel/pb"
 	v1 "github.com/fatedier/frp/pkg/config/v1"
 	"github.com/samber/lo"
 	"gorm.io/gorm"

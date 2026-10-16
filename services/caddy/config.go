@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/VaalaCat/frp-panel/models"
+	"github.com/yunj-yun/frp-web-panel/models"
 )
 
 var domainPattern = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$`)

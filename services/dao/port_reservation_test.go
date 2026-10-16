@@ -3,7 +3,7 @@ package dao
 import (
 	"testing"
 
-	"github.com/VaalaCat/frp-panel/models"
+	"github.com/yunj-yun/frp-web-panel/models"
 	v1 "github.com/fatedier/frp/pkg/config/v1"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"

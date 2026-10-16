@@ -4,9 +4,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/VaalaCat/frp-panel/defs"
-	"github.com/VaalaCat/frp-panel/pb"
-	"github.com/VaalaCat/frp-panel/utils"
+	"github.com/yunj-yun/frp-web-panel/defs"
+	"github.com/yunj-yun/frp-web-panel/pb"
+	"github.com/yunj-yun/frp-web-panel/utils"
 	"github.com/casbin/casbin/v2"
 
 	"github.com/fatedier/frp/client/proxy"

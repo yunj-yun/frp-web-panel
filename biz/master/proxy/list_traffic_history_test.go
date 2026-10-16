@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/VaalaCat/frp-panel/models"
+	"github.com/yunj-yun/frp-web-panel/models"
 )
 
 func TestTrafficHistoryDeltasUsesBaselineOutsideRange(t *testing.T) {

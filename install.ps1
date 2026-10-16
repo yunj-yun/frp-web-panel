@@ -3,7 +3,7 @@ if($PSVersionTable.PSVersion.Major -lt 5){
     Write-Host "Require PS >= 5,your PSVersion:"$PSVersionTable.PSVersion.Major -BackgroundColor DarkGreen -ForegroundColor White
     exit
 }
-$clientrepo = "VaalaCat/frp-panel"
+$clientrepo = "yunj-yun/frp-web-panel"
 #  x86 or x64
 if ([System.Environment]::Is64BitOperatingSystem) {
     if ([System.Environment]::Is64BitProcess) {

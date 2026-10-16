@@ -50,6 +50,13 @@ else
 fi
 # --- End Network Check and Prefix Setting ---
 
+release_download="${prefix}https://github.com/yunj-yun/frp-web-panel/releases"
+if [ "$version" = "latest" ]; then
+    release_download="$release_download/latest/download"
+else
+    release_download="$release_download/download/$version"
+fi
+
 
 current_dir=$(pwd)
 temp_dir=$(mktemp -d)
@@ -60,16 +67,16 @@ case "$OS" in
     Linux)
         case "$ARCH" in
             x86_64)
-                wget -O frp-panel "${prefix}https://github.com/VaalaCat/frp-panel/releases/download/${version}/frp-panel-linux-amd64"
+                wget -O frp-panel "$release_download/frp-panel-linux-amd64"
                 ;;
             aarch64)
-                wget -O frp-panel "${prefix}https://github.com/VaalaCat/frp-panel/releases/download/${version}/frp-panel-linux-arm64"
+                wget -O frp-panel "$release_download/frp-panel-linux-arm64"
                 ;;
             armv7l)
-                wget -O frp-panel "${prefix}https://github.com/VaalaCat/frp-panel/releases/download/${version}/frp-panel-linux-armv7l"
+                wget -O frp-panel "$release_download/frp-panel-linux-armv7l"
                 ;;
             armv6l)
-                wget -O frp-panel "${prefix}https://github.com/VaalaCat/frp-panel/releases/download/${version}/frp-panel-linux-armv6l"
+                wget -O frp-panel "$release_download/frp-panel-linux-armv6l"
                 ;;
             *)
                  echo "Unsupported Linux architecture: $ARCH"
@@ -80,10 +87,10 @@ case "$OS" in
     Darwin)
         case "$ARCH" in
             x86_64)
-                wget -O frp-panel "${prefix}https://github.com/VaalaCat/frp-panel/releases/download/${version}/frp-panel-darwin-amd64"
+                wget -O frp-panel "$release_download/frp-panel-darwin-amd64"
                 ;;
             arm64)
-                wget -O frp-panel "${prefix}https://github.com/VaalaCat/frp-panel/releases/download/${version}/frp-panel-darwin-arm64"
+                wget -O frp-panel "$release_download/frp-panel-darwin-arm64"
                 ;;
             *)
                 echo "Unsupported Darwin architecture: $ARCH"

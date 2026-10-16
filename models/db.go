@@ -3,8 +3,8 @@ package models
 import (
 	"context"
 
-	"github.com/VaalaCat/frp-panel/defs"
-	"github.com/VaalaCat/frp-panel/utils/logger"
+	"github.com/yunj-yun/frp-web-panel/defs"
+	"github.com/yunj-yun/frp-web-panel/utils/logger"
 	"gorm.io/gorm"
 )
 

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/VaalaCat/frp-panel/defs"
+	"github.com/yunj-yun/frp-web-panel/defs"
 )
 
 // ProbeEndpoint sends a small UDP packet to addr and waits for a reply.

@@ -23,7 +23,7 @@ Usage:
 
 Options:
   --dir <path>             Deployment directory (default: /opt/frp-panel)
-  --tag <tag>              Image tag from scripts/build-image.sh (default: alpha)
+  --tag <tag>              Image tag from scripts/build-image.sh (default: latest)
   --build                  Build and load this tag locally before deploying (requires --tag)
   --api-host <host>        Public host used for the Master API and first Server
   --rpc-host <host>        Public host used for Master RPC (default: API host)
@@ -146,7 +146,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
     *) echo "--client-rpc-url must start with grpc://, ws://, or wss://." >&2; exit 2 ;;
   esac
 
-  IMAGE="vaalacat/frp-panel:${TAG:-alpha}"
+  IMAGE="${FRP_WEB_PANEL_IMAGE_REPOSITORY:-ghcr.io/yunj-yun/frp-web-panel}:${TAG:-latest}"
   APP_GLOBAL_SECRET="$(openssl rand -hex 32)"
   umask 077
   {
@@ -170,7 +170,7 @@ fi
 
 cd "$DEPLOY_DIR"
 if [[ -n "$TAG" ]]; then
-  export FRP_PANEL_IMAGE="vaalacat/frp-panel:${TAG}"
+  export FRP_PANEL_IMAGE="${FRP_WEB_PANEL_IMAGE_REPOSITORY:-ghcr.io/yunj-yun/frp-web-panel}:${TAG}"
 fi
 
 if [[ "$BUILD_IMAGE" == "true" ]]; then
@@ -212,7 +212,7 @@ fi
 if [[ -n "$TAG" ]]; then
   env_tmp="$(mktemp "$DEPLOY_DIR/.env.XXXXXX")"
   sed '/^FRP_PANEL_IMAGE=/d' "$ENV_FILE" > "$env_tmp"
-  printf 'FRP_PANEL_IMAGE=vaalacat/frp-panel:%s\n' "$TAG" >> "$env_tmp"
+  printf 'FRP_PANEL_IMAGE=%s:%s\n' "${FRP_WEB_PANEL_IMAGE_REPOSITORY:-ghcr.io/yunj-yun/frp-web-panel}" "$TAG" >> "$env_tmp"
   chmod 600 "$env_tmp"
   mv "$env_tmp" "$ENV_FILE"
 fi

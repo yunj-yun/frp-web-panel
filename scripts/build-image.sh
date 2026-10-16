@@ -2,14 +2,14 @@
 set -Eeuo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-IMAGE_REPOSITORY="vaalacat/frp-panel"
+IMAGE_REPOSITORY="${FRP_WEB_PANEL_IMAGE_REPOSITORY:-ghcr.io/yunj-yun/frp-web-panel}"
 TAG=""
 PLATFORMS=""
 OUTPUT="load"
 
 usage() {
   cat <<'EOF'
-Build the unified FRP-Panel image used by Master, Server, and Client.
+Build the unified FRP Web Panel image used by Master, Server, and Client.
 
 Usage:
   scripts/build-image.sh --tag <tag> [--platform <platforms>] [--load|--push]
@@ -18,12 +18,14 @@ Options:
   --tag <tag>          Docker tag and application version (required)
   --platform <list>    Buildx platform list, e.g. linux/amd64,linux/arm64
   --load               Load a single-platform image into the local Docker engine (default)
-  --push               Push the image to vaalacat/frp-panel
+  --push               Push the image to the configured image repository
   -h, --help           Show this help
 
 Examples:
   scripts/build-image.sh --tag v1.2.3 --load
   scripts/build-image.sh --tag v1.2.3 --platform linux/amd64,linux/arm64 --push
+
+Override the default ghcr.io/yunj-yun/frp-web-panel with FRP_WEB_PANEL_IMAGE_REPOSITORY.
 EOF
 }
 

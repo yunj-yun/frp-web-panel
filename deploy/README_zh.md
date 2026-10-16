@@ -10,19 +10,19 @@ Master、Server、Client 使用同一个镜像，通过启动命令选择运行�
 ./scripts/build-image.sh --tag v1.2.3 --load
 ```
 
-需要让其他设备拉取镜像时，将同一版本推送到镜像仓库：
+需要让其他设备拉取镜像时，将同一版本推送到 GitHub Container Registry：
 
 ```bash
-docker login
+docker login ghcr.io -u yunj-yun
 ./scripts/build-image.sh --tag v1.2.3 --platform linux/amd64,linux/arm64 --push
 ```
 
-`--push` 需要有 `vaalacat/frp-panel` 的写入权限。节点 Compose 由 Master 网页按当前 Master 版本生成，镜像地址为 `vaalacat/frp-panel:<版本>`。因此远程节点需要能够从 Docker Hub 拉取该 tag。只使用 `--load` 构建的镜像仅存在于本机；没有该镜像仓库的写入权限时，可以将构建结果导出并在目标设备导入：
+`--push` 需要有 `ghcr.io/yunj-yun/frp-web-panel` 的写入权限；节点 Compose 使用相同镜像地址，并按 Master 当前版本生成 tag。首次发布后，请在 GitHub Packages 中将镜像包设为 Public，这样目标节点无需登录即可拉取。只使用 `--load` 构建的镜像仅存在于本机，也可导出后在目标设备导入：
 
 ```bash
-docker save vaalacat/frp-panel:v1.2.3 | gzip > frp-panel-v1.2.3.tar.gz
+docker save ghcr.io/yunj-yun/frp-web-panel:v1.2.3 | gzip > frp-web-panel-v1.2.3.tar.gz
 # 在每台目标设备上
-gzip -dc frp-panel-v1.2.3.tar.gz | docker load
+gzip -dc frp-web-panel-v1.2.3.tar.gz | docker load
 ```
 
 ## 部署 Master

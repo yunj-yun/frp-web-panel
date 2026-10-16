@@ -3,7 +3,7 @@ package dao
 import (
 	"fmt"
 
-	"github.com/VaalaCat/frp-panel/models"
+	"github.com/yunj-yun/frp-web-panel/models"
 )
 
 type WorkerQuery interface {

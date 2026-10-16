@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/VaalaCat/frp-panel/models"
+	"github.com/yunj-yun/frp-web-panel/models"
 	v1 "github.com/fatedier/frp/pkg/config/v1"
 	"gorm.io/gorm"
 )

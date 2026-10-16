@@ -51,7 +51,7 @@ export default function RegisterPage() {
                 <footer className="text-sm mt-4 opacity-80">
                   {t('app.github.navigate')} 
                   <a 
-                    href="https://github.com/VaalaCat/frp-panel"
+                    href="https://github.com/yunj-yun/frp-web-panel"
                     className="hover:text-white hover:underline ml-1"
                     target="_blank"
                     rel="noopener noreferrer"

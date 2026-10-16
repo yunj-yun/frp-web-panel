@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/VaalaCat/frp-panel/defs"
+	"github.com/yunj-yun/frp-web-panel/defs"
 	gopsutilnet "github.com/shirou/gopsutil/v4/net"
 )
 

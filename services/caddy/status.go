@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/VaalaCat/frp-panel/pb"
+	"github.com/yunj-yun/frp-web-panel/pb"
 )
 
 const maxCertificateFileSize = 2 * 1024 * 1024

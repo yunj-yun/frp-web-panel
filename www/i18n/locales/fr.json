@@ -1,11 +1,11 @@
 {
   "app": {
-    "title": "FRP-Panel",
-    "subtitle": "FRP-Panel",
-    "description": "Une interface web frp multi-nœuds pour la gestion des serveurs et clients [FRP], ce qui fait de ce projet une alternative open source à [Cloudflare Tunnel] ou [Tailscale Funnel]",
+    "title": "FRP Web Panel",
+    "subtitle": "FRP Web Panel",
+    "description": "Gérez les nœuds, tunnels, certificats, trafics et états FRP depuis une interface auto-hébergée.",
     "github": {
       "navigate": "naviguer vers :",
-      "repo": "VaalaCat/frp-panel"
+      "repo": "yunj-yun/frp-web-panel"
     }
   },
   "selector": {
@@ -122,7 +122,7 @@
     "temp_node": "Temporaire",
     "start": {
       "title": "Commande de Démarrage",
-      "description": "Copiez et exécutez la commande suivante pour démarrer le client frp-panel"
+      "description": "Copiez et exécutez la commande suivante pour démarrer le client FRP Web Panel"
     },
     "delete": {
       "success": "Suppression réussie",
@@ -453,7 +453,7 @@
     },
     "start": {
       "title": "Commande de Démarrage",
-      "description": "Copiez et exécutez la commande suivante pour démarrer le serveur frp-panel"
+      "description": "Copiez et exécutez la commande suivante pour démarrer le serveur FRP Web Panel"
     },
     "delete": {
       "success": "Suppression réussie",

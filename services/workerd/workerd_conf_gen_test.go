@@ -3,7 +3,7 @@ package workerd
 import (
 	"testing"
 
-	"github.com/VaalaCat/frp-panel/pb"
+	"github.com/yunj-yun/frp-web-panel/pb"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 )

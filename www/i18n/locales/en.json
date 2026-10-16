@@ -1,11 +1,11 @@
 {
   "app": {
-    "title": "FRP-Panel",
+    "title": "FRP Web Panel",
     "subtitle": "FRP Tunnel Panel",
-    "description": "A multi node frp webui for [FRP] server and client management, which makes this project a [Cloudflare Tunnel] or [Tailscale Funnel] open source alternative",
+    "description": "Manage FRP nodes, tunnels, certificates, traffic, and runtime health from one self-hosted panel.",
     "github": {
       "navigate": "navigate to:",
-      "repo": "VaalaCat/frp-panel"
+      "repo": "yunj-yun/frp-web-panel"
     }
   },
   "dashboard": {
@@ -95,11 +95,11 @@
     "upgrade": {
       "dispatched": "Upgrade dispatched. Client may go offline briefly.",
       "failed": "Failed to dispatch upgrade",
-      "title": "Upgrade frp-panel",
+      "title": "Upgrade FRP Web Panel",
       "warning": "Upgrade will restart client service. Connection may drop briefly (expected).",
       "version": "Version (default latest)",
       "download_url": "Download URL (optional, highest priority)",
-      "download_url_placeholder": "e.g. https://ghfast.top/https://github.com/.../frp-panel-linux-amd64",
+      "download_url_placeholder": "e.g. https://github.com/yunj-yun/frp-web-panel/releases/download/v1.0.0/frp-panel-linux-amd64",
       "http_proxy": "HTTP proxy (optional)",
       "confirm": "Start upgrade"
     },
@@ -133,7 +133,7 @@
     "temp_node": "Temporary",
     "start": {
       "title": "Start Command",
-      "description": "Copy and run the following command to start frp-panel client"
+      "description": "Copy and run the following command to start the FRP Web Panel client"
     },
     "compose": {
       "title": "Docker Compose",
@@ -169,7 +169,7 @@
       "download_config": "Download Configuration",
       "realtime_log": "Real-time Log",
       "remote_terminal": "Remote Terminal",
-      "upgrade": "Upgrade frp-panel",
+      "upgrade": "Upgrade FRP Web Panel",
       "pause": "Pause",
       "resume": "Resume",
       "delete": "Delete"
@@ -485,7 +485,7 @@
     },
     "start": {
       "title": "Start Command",
-      "description": "Copy and run the following command to start frp-panel server"
+      "description": "Copy and run the following command to start the FRP Web Panel server"
     },
     "compose": {
       "title": "Docker Compose",

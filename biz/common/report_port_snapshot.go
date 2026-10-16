@@ -1,8 +1,8 @@
 package common
 
 import (
-	"github.com/VaalaCat/frp-panel/pb"
-	"github.com/VaalaCat/frp-panel/services/ports"
+	"github.com/yunj-yun/frp-web-panel/pb"
+	"github.com/yunj-yun/frp-web-panel/services/ports"
 )
 
 func PortSockets(sockets []ports.Snapshot) []*pb.PortSocket {
