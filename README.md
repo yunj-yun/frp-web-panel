@@ -1,28 +1,251 @@
 # FRP Web Panel
 
-FRP Web Panel is a self-hosted management and monitoring panel for FRP, customized from FRP-Panel for this deployment's workflows: node health, Docker Compose generation, port visibility, traffic history, Caddy certificate management, and a streamlined interface.
+[English](./README_EN.md)
 
-## Features
+FRP Web Panel 是一个面向自托管环境的 FRP 管理与监控平台。它以 `VaalaCat/frp-panel` 为上游基础，针对实际的 Docker 部署、节点运维、端口检查、流量统计和 Caddy HTTPS 网关进行了二次开发。
 
-- Manage Master, FRP Server, and FRP Client nodes from one web interface.
-- Create, edit, and remove TCP, UDP, HTTP, and HTTPS tunnels, with advanced FRP JSON configuration.
-- Generate Docker Compose files for Client and Server nodes, including Server-side Caddy.
-- View node status, version, heartbeat, latency, and observed port usage.
-- Inspect current and historical tunnel traffic, including custom date ranges.
-- Review real-time node logs and open remote terminals when enabled by the administrator.
-- Request and manage certificates, renew them automatically, and deploy them to selected Servers.
-- Keep Worker management available on Linux nodes.
+项目的核心目标是：管理员在 Master 网页中管理 Server、Client、Worker、隧道和证书；节点页面直接生成可复制的 Docker Compose；节点运行状态、日志、端口快照和流量历史集中回到 Master 查看。
 
-## Docker Deployment
+## 功能概览
 
-Docker is the primary deployment method. The Master deployment script creates a random application secret and starts the SQLite-backed service. After creating nodes in the web interface, copy the generated Compose file to each target Linux host.
+- **Master 控制面**：用户、权限、节点、隧道、证书、网关和操作状态统一管理。
+- **Server 管理**：部署和管理 `frps`，生成 FRP Server Compose，并可同时运行 Caddy HTTPS 网关。
+- **Client 管理**：部署和管理 `frpc`，连接内网服务，接收 Master 下发的隧道配置。
+- **Worker 管理**：保留 Linux Worker 的创建、部署、运行状态和入口管理能力。
+- **隧道管理**：创建、编辑、删除和启停隧道；覆盖 TCP、UDP、HTTP、HTTPS 等常用模式，并保留高级 FRP JSON 配置。
+- **节点监控**：查看在线状态、心跳、延迟、版本、平台、连接时间和最近端口快照。
+- **端口检查**：展示节点当前监听的 TCP/UDP 端口，并结合平台内已分配端口检查潜在冲突。
+- **流量统计**：查看隧道进出流量，支持近 1/3/7/30 天和自定义日期范围，并保留历史按日数据。
+- **实时运维**：查看节点实时日志、连接/断开节点和使用远程终端。远程 Shell 可通过配置关闭。
+- **证书与 HTTPS**：在证书页面登记域名、选择目标 Server 和 ACME challenge；由目标 Server 上的 Caddy 签发、续期和保存证书。
+- **Docker 优先**：Master、Server、Client 使用同一镜像，通过启动命令选择角色；网页生成节点 Compose，避免手写长命令和凭据。
 
-See [Docker deployment instructions](./deploy/README_zh.md) for image building, publishing, Master setup, and node deployment.
+## 架构
 
-## Development
+```text
+浏览器
+  |
+  | Web/API
+  v
+Master（SQLite、节点/隧道/证书/统计管理）
+  |                         |
+  | 加密控制通道              | 生成 Compose / 下发配置
+  v                         v
+Server Agent + frps + Caddy  Client Agent + frpc + 可选 Worker
+  |                         |
+公网 FRP 端口、80/443         内网服务，例如 127.0.0.1:8880
+```
 
-The repository contains the Go services and the Next.js web application. See [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) and [PROJECT_PLAN.md](./PROJECT_PLAN.md) for the product scope and development notes.
+### 网络模式
 
-## Attribution and License
+| 组件 | 默认网络 | 说明 |
+| --- | --- | --- |
+| Master | Docker bridge | 仅发布 Web/API 和 RPC 端口，SQLite 放在持久化目录。 |
+| Server Agent + frps | Linux host | 直接绑定宿主机的 FRP 端口和 Caddy 的 80/443。 |
+| Caddy | Linux host | 与 Server 共用宿主机网络，负责 ACME 和 HTTPS 入口。 |
+| Client Agent + frpc | Linux host | 直接访问宿主机上的内网服务。 |
+| Worker | Linux 节点上的 Worker 运行时 | 由 Client Agent 管理，首期面向 Linux x86_64/ARM64。 |
 
-This project is a customization of [VaalaCat/frp-panel](https://github.com/VaalaCat/frp-panel). The upstream AGPL-3.0 license and copyright notices are retained in [LICENSE](./LICENSE).
+Server 和 Client 的 Compose 使用 `network_mode: host`，因此 Compose 不再生成 `ports:` 映射；宿主机端口冲突会直接表现为服务 bind 失败。Master 使用 bridge 网络，默认发布 `9000/tcp`（Web/API）和 `9001/tcp`（RPC）。
+
+## HTTPS 网关和证书
+
+推荐的 HTTP 隧道访问链路如下：
+
+```text
+https://app.example.com:443
+        -> Server Caddy
+        -> frps HTTP vhost 端口
+        -> 指定 Client 的 HTTP 隧道
+        -> 客户端本地服务 :8880
+```
+
+也就是说，客户端本地端口 `8880` 可以通过 HTTP 隧道映射到 FRP 的 HTTP 虚拟主机端口，再由 Server 上的 Caddy 使用域名证书监听 `443`。Caddy 会保留原始 `Host`，使 `frps` 能按域名选择正确的隧道。
+
+证书页面支持：
+
+- 登记一个或多个域名并选择目标 Server。
+- 选择 HTTP-01 或 TLS-ALPN-01 challenge。
+- 发起申请、重新申请和自动续期状态同步。
+- 将域名绑定到 HTTPS Gateway 路由，并显示 Caddy 应用状态和错误信息。
+- 证书私钥只保存在目标 Server 的 Caddy 数据目录，不回传到 Master 数据库。
+
+使用证书前需要手动在 Cloudflare 或其他 DNS 服务商配置 A/AAAA 记录，使域名指向目标 Server。平台当前不调用 Cloudflare DNS API，也不负责修改 DNS。HTTP-01 要求公网 TCP 80 可达，TLS-ALPN-01 要求公网 TCP 443 可达；Caddy 需要独占这些端口。
+
+`type=https` 的 FRP 原生 HTTPS 隧道是另一种模式：TLS 通常透传到 Client 的本地服务，证书应由本地服务负责。它与 Server Caddy 终止 TLS 的 HTTPS Gateway 不同。首期不支持通配符证书和 DNS-01 自动化。公网 ACME 签发、自动续期和真实公网访问仍需要在具备公网地址的环境中由部署者验收。
+
+## Docker 部署
+
+### 环境要求
+
+- Linux Docker Engine。
+- Docker Compose v2，即 `docker compose` 命令。
+- 构建镜像时需要 Docker Buildx；多架构发布还需要 QEMU。
+- Server/Client 节点建议使用 Linux Docker Engine，因为它们依赖 host 网络。
+
+Master、Server、Client 使用同一个镜像，通过 `master`、`server` 或 `client` 启动参数选择角色。默认镜像地址为：
+
+```text
+ghcr.io/yunj-yun/frp-web-panel
+```
+
+### 构建镜像
+
+加载到当前 Docker 主机：
+
+```bash
+./scripts/build-image.sh --tag v1.2.3 --load
+```
+
+构建并推送 `linux/amd64` 和 `linux/arm64`：
+
+```bash
+docker login ghcr.io -u yunj-yun
+./scripts/build-image.sh \
+  --tag v1.2.3 \
+  --platform linux/amd64,linux/arm64 \
+  --push
+```
+
+脚本支持通过 `FRP_WEB_PANEL_IMAGE_REPOSITORY` 覆盖镜像地址。`--load` 只支持单一平台；需要让离线节点导入时，可以导出镜像：
+
+```bash
+docker save ghcr.io/yunj-yun/frp-web-panel:v1.2.3 | gzip > frp-web-panel-v1.2.3.tar.gz
+gzip -dc frp-web-panel-v1.2.3.tar.gz | docker load
+```
+
+### 部署 Master
+
+使用已发布镜像：
+
+```bash
+sudo ./scripts/deploy-master.sh \
+  --tag v1.2.3 \
+  --api-host panel.example.com \
+  --rpc-host panel.example.com
+```
+
+脚本会：
+
+1. 创建 `/opt/frp-panel`（可用 `--dir` 修改）和 `data/` 数据目录。
+2. 生成随机 `APP_GLOBAL_SECRET`，写入权限为 `600` 的 `.env`。
+3. 写入 Master Compose，拉取镜像并启动容器。
+4. 等待 `/login` 健康检查通过后输出 Web UI 地址。
+
+首次打开 Web UI 后注册的第一个用户会成为管理员。Compose 默认发布：
+
+- `9000/tcp`：Web/API。
+- `9001/tcp`：RPC，供节点连接。
+
+如果镜像已经加载到本机：
+
+```bash
+sudo ./scripts/deploy-master.sh \
+  --tag v1.2.3 \
+  --api-host 192.168.1.10 \
+  --skip-pull
+```
+
+也可以由部署脚本先构建镜像再启动：
+
+```bash
+sudo ./scripts/deploy-master.sh \
+  --build \
+  --tag v1.2.3 \
+  --api-host 192.168.1.10
+```
+
+反向代理或 CDN 场景下，使用 `--client-api-url` 和 `--client-rpc-url` 指定节点真正访问的 URL，例如 `https://panel.example.com` 和 `wss://panel.example.com`。备份 Master 时应同时备份 `.env` 和 `data/`，其中包含 SQLite 数据库和应用状态。
+
+### 部署 Server 和 Client
+
+1. 登录 Master，在 Server 或 Client 页面创建节点。
+2. 打开节点详情页，复制或下载生成的 `docker-compose.yml`。
+3. 将文件放入目标 Linux 主机目录。
+4. 在该目录执行：
+
+   ```bash
+   docker compose up -d
+   ```
+
+生成的 Compose 已包含节点 ID、连接凭据、Master API/RPC 地址和当前镜像 tag。Server Compose 还包含 Caddy，并将 `./caddy`、`./caddy/data` 和 `./caddy/config` 持久化到当前目录。请保留整个目录，不要删除 Caddy 数据，否则会丢失已签发证书和续期状态。
+
+节点上线后，Master 会显示心跳、版本、延迟、端口快照和运行状态。节点凭据属于敏感信息，不应提交到代码仓库或公开粘贴。
+
+更完整的参数说明见 [Docker 部署说明](./deploy/README_zh.md)。
+
+## 节点、隧道和端口
+
+### 节点
+
+节点页面支持创建、编辑、删除和重新生成部署内容。Server、Client 和 Worker 的状态分别显示在线、离线、连接时间、版本、平台和错误信息。Worker 保留在产品范围内，首期运行目标为 Linux x86_64/ARM64。
+
+### 隧道
+
+隧道可以选择 Client、Server、类型、本地地址、本地端口和远程端口。TCP、UDP、HTTP、HTTPS 等常用 FRP 配置有表单；高级模式保留原始 FRP JSON，保存前进行结构化校验。编辑或删除隧道时，页面会提示受影响的 Gateway 路由和证书绑定。
+
+对于 TCP/UDP 隧道，Server 上的 `remotePort` 需要同时满足：端口范围合法、平台内没有重复分配、最近一次节点端口快照未发现冲突。HTTP/HTTPS 隧道使用域名和 FRP HTTP 虚拟主机逻辑，不把本地 `8880` 直接当成公网 `443` 绑定端口。
+
+### 端口检查的边界
+
+Agent 优先执行 `ss -H -ltnup`，不可用时回退到系统 socket 查询，并上报协议、监听地址、端口、进程和采集时间。Master 同时保存：
+
+- 节点当前监听的时点快照。
+- 平台已经分配或预留的端口。
+- 正在应用的新配置将占用的端口。
+
+快照是观测结果，不是操作系统级锁。检查通过后，其他进程仍可能抢先监听；最终以服务启动时的 bind 和健康状态为准。
+
+## 流量、日志和远程终端
+
+- 流量按平台配置的时区切分自然日，支持近 1、3、7、30 天快捷查询。
+- 自定义查询使用半开区间 `[start, end)`；例如 10 月 7 日全天选择 `10-07 00:00` 到 `10-08 00:00`。
+- 统计页面同时显示入站、出站、合计和每日明细，并可按隧道、Client、Server 筛选。
+- 日志页面支持节点实时日志和 FRP/Worker 日志流。
+- 远程终端通过 Master 与节点的控制通道建立 PTY 会话。生产环境如不需要该能力，可在 Master 配置 `CLIENT_FEATURES_ENABLE_REMOTE_SHELL=false` 后重启服务。
+
+## 配置和安全建议
+
+- 生产环境必须使用随机且足够长的 `APP_GLOBAL_SECRET`；部署脚本会自动生成。
+- `.env`、SQLite `data/`、节点 Compose 和 Caddy 数据目录都可能包含凭据或证书信息，应限制文件权限并纳入备份策略。
+- Master 首次注册后建议关闭公开注册，默认 Compose 已设置 `APP_ENABLE_REGISTER=false`。
+- 对外发布 Master 时优先使用 HTTPS 反向代理，并为 API 和 RPC 配置正确的转发协议。
+- Server 上的 Caddy 需要独占 80/443；FRP `bindPort`、HTTP vhost 端口和 TCP/UDP `remotePort` 也必须避开宿主机已有监听。
+- 不要把真实域名、节点 secret、JWT、`.env` 或 Caddy 私钥提交到 Git。
+
+## 开发
+
+推荐环境：Go 1.24、Node.js 20、pnpm 9.15.9。前端位于 `www/`，构建产物会复制到 Go 服务的静态资源目录。
+
+```bash
+# 前端开发
+cd www
+pnpm install --frozen-lockfile
+pnpm dev
+
+# 前端生产构建
+pnpm build
+
+# 返回仓库根目录后构建发布二进制（跳过前端构建）
+cd ..
+./build.sh --skip-frontend
+```
+
+打 `v*` 标签会触发 `.github/workflows/release.yml`：构建前端和 Go 发布文件，创建 GitHub Release，并向 GHCR 发布 `linux/amd64` 和 `linux/arm64` 镜像。提交前可执行静态检查：
+
+```bash
+git diff --check
+bash -n scripts/build-image.sh scripts/deploy-master.sh install.sh
+```
+
+## 当前边界
+
+- WireGuard 组网页面、接口、运行时和产品文档已移除；FRP 隧道和 Worker 仍保留。
+- 暂不提供主机 CPU、内存、磁盘等完整主机监控；当前监控范围是节点、隧道、端口和流量。
+- 暂不调用 Cloudflare DNS API，也不自动修改 A/AAAA 记录。
+- 暂不支持通配符证书和 DNS-01 自动化。
+- 当前公网 ACME 签发、自动续期、浏览器信任链和真实公网 443 访问需要在具备公网地址的环境中由部署者完成验收。
+
+## 许可证与上游归属
+
+本项目以 AGPL-3.0 发布，许可证和版权说明见 [LICENSE](./LICENSE)。项目基于 [VaalaCat/frp-panel](https://github.com/VaalaCat/frp-panel) 二次开发，并保留上游要求的许可证和归属信息。仓库中的 `frp-panel` 二进制、服务和容器命令名是兼容既有安装与升级流程的内部标识，不代表发布地址或镜像地址仍指向上游项目。
