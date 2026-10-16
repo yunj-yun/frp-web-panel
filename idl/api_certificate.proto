@@ -1,0 +1,179 @@
+syntax = "proto3";
+
+package api_certificate;
+
+import "common.proto";
+
+option go_package = "../pb";
+
+message ManagedCertificate {
+  uint32 id = 1;
+  string name = 2;
+  repeated string domains = 3;
+  string primary_domain = 4;
+  string server_id = 5;
+  string challenge = 6;
+  bool auto_renew = 7;
+  string issuer = 8;
+  string fingerprint = 9;
+  string storage_id = 10;
+  string status = 11;
+  string error_message = 12;
+  int64 issued_at = 13;
+  int64 expires_at = 14;
+  int64 created_at = 15;
+  int64 updated_at = 16;
+}
+
+message CertificateJob {
+  uint32 id = 1;
+  uint32 certificate_id = 2;
+  string action = 3;
+  string status = 4;
+  string error_message = 5;
+  uint32 attempts = 6;
+  int64 started_at = 7;
+  int64 finished_at = 8;
+  int64 created_at = 9;
+  int64 updated_at = 10;
+}
+
+message ListManagedCertificatesRequest {
+  uint32 page = 1;
+  uint32 page_size = 2;
+  string keyword = 3;
+}
+
+message ListManagedCertificatesResponse {
+  optional common.Status status = 1;
+  repeated ManagedCertificate certificates = 2;
+  uint32 total = 3;
+}
+
+message CreateManagedCertificateRequest {
+  string name = 1;
+  repeated string domains = 2;
+  string server_id = 3;
+  string challenge = 4;
+  optional bool auto_renew = 5;
+}
+
+message CreateManagedCertificateResponse {
+  optional common.Status status = 1;
+  optional ManagedCertificate certificate = 2;
+}
+
+message UpdateManagedCertificateRequest {
+  uint32 id = 1;
+  string name = 2;
+  repeated string domains = 3;
+  string server_id = 4;
+  string challenge = 5;
+  optional bool auto_renew = 6;
+}
+
+message UpdateManagedCertificateResponse {
+  optional common.Status status = 1;
+  optional ManagedCertificate certificate = 2;
+}
+
+message DeleteManagedCertificateRequest {
+  uint32 id = 1;
+}
+
+message DeleteManagedCertificateResponse {
+  optional common.Status status = 1;
+}
+
+message RequestCertificateRequest {
+  uint32 certificate_id = 1;
+}
+
+message RequestCertificateResponse {
+  optional common.Status status = 1;
+  optional CertificateJob job = 2;
+}
+
+message ListCertificateJobsRequest {
+  uint32 certificate_id = 1;
+  uint32 page = 2;
+  uint32 page_size = 3;
+}
+
+message ListCertificateJobsResponse {
+  optional common.Status status = 1;
+  repeated CertificateJob jobs = 2;
+  uint32 total = 3;
+}
+
+message GatewayRoute {
+  uint32 id = 1;
+  string domain = 2;
+  uint32 listen_port = 3;
+  string server_id = 4;
+  uint32 proxy_id = 5;
+  uint32 certificate_id = 6;
+  uint32 upstream_port = 7;
+  string status = 8;
+  string error_message = 9;
+  int64 last_applied_at = 10;
+  int64 created_at = 11;
+  int64 updated_at = 12;
+}
+
+message ListGatewayRoutesRequest {
+  uint32 page = 1;
+  uint32 page_size = 2;
+  string keyword = 3;
+  string server_id = 4;
+}
+
+message ListGatewayRoutesResponse {
+  optional common.Status status = 1;
+  repeated GatewayRoute routes = 2;
+  uint32 total = 3;
+}
+
+message CreateGatewayRouteRequest {
+  string domain = 1;
+  uint32 listen_port = 2;
+  string server_id = 3;
+  uint32 proxy_id = 4;
+  uint32 certificate_id = 5;
+}
+
+message CreateGatewayRouteResponse {
+  optional common.Status status = 1;
+  optional GatewayRoute route = 2;
+}
+
+message UpdateGatewayRouteRequest {
+  uint32 id = 1;
+  string domain = 2;
+  uint32 listen_port = 3;
+  string server_id = 4;
+  uint32 proxy_id = 5;
+  uint32 certificate_id = 6;
+}
+
+message UpdateGatewayRouteResponse {
+  optional common.Status status = 1;
+  optional GatewayRoute route = 2;
+}
+
+message DeleteGatewayRouteRequest {
+  uint32 id = 1;
+}
+
+message DeleteGatewayRouteResponse {
+  optional common.Status status = 1;
+}
+
+message SyncGatewayRouteRequest {
+  uint32 id = 1;
+}
+
+message SyncGatewayRouteResponse {
+  optional common.Status status = 1;
+  optional GatewayRoute route = 2;
+}

@@ -1,0 +1,8 @@
+{
+	admin 127.0.0.1:2019
+	auto_https off
+}
+
+:18444 {
+	respond "caddy is ready" 200
+}

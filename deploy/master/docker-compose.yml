@@ -1,0 +1,31 @@
+name: ${COMPOSE_PROJECT_NAME:-frp-panel}
+
+services:
+  master:
+    image: ${FRP_PANEL_IMAGE:?Set FRP_PANEL_IMAGE in .env}
+    container_name: ${FRP_PANEL_CONTAINER_NAME:-frp-panel-master}
+    restart: unless-stopped
+    ports:
+      - "${MASTER_WEB_PORT:-9000}:9000/tcp"
+      - "${MASTER_RPC_PORT:-9001}:9001/tcp"
+    environment:
+      APP_GLOBAL_SECRET: ${APP_GLOBAL_SECRET:?Set APP_GLOBAL_SECRET in .env}
+      APP_ENABLE_REGISTER: "false"
+      MASTER_API_HOST: ${MASTER_API_HOST:?Set MASTER_API_HOST in .env}
+      MASTER_API_PORT: "9000"
+      MASTER_API_SCHEME: ${MASTER_API_SCHEME:-http}
+      MASTER_RPC_HOST: ${MASTER_RPC_HOST:?Set MASTER_RPC_HOST in .env}
+      MASTER_RPC_PORT: "9001"
+      CLIENT_API_URL: ${CLIENT_API_URL:?Set CLIENT_API_URL in .env}
+      CLIENT_RPC_URL: ${CLIENT_RPC_URL:?Set CLIENT_RPC_URL in .env}
+      DB_TYPE: sqlite3
+      DB_DSN: /data/data.db?_pragma=journal_mode(WAL)
+      IS_DEBUG: "false"
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:9000/login"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3

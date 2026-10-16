@@ -1,0 +1,35 @@
+# Build images can be overridden when a deployment uses a registry mirror.
+ARG FRONTEND_IMAGE=node:20-alpine
+ARG GO_IMAGE=golang:1.24-alpine
+ARG RUNTIME_IMAGE=alpine:3.22
+
+FROM ${FRONTEND_IMAGE} AS frontend
+WORKDIR /app/www
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm install --global pnpm@9.15.9
+COPY www/package.json www/pnpm-lock.yaml www/pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY www/ ./
+RUN pnpm exec next build
+
+FROM ${GO_IMAGE} AS builder
+WORKDIR /app
+ENV CGO_ENABLED=0 GOTOOLCHAIN=local
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+COPY --from=frontend /app/www/out ./cmd/frpp/out
+ARG VERSION=dev-build
+ARG GIT_COMMIT=unknown
+ARG BUILD_DATE=unknown
+RUN go build -trimpath -ldflags="-s -w -X github.com/VaalaCat/frp-panel/conf.gitVersion=${VERSION} -X github.com/VaalaCat/frp-panel/conf.gitCommit=${GIT_COMMIT} -X github.com/VaalaCat/frp-panel/conf.buildDate=${BUILD_DATE}" -o /app/frp-panel ./cmd/frpp
+
+FROM ${RUNTIME_IMAGE}
+WORKDIR /app
+RUN apk add --no-cache ca-certificates tzdata iproute2 curl bash && mkdir -p /data
+COPY --from=builder /app/frp-panel ./frp-panel
+ENV TZ=Asia/Shanghai
+ENV DB_DSN=/data/data.db?_pragma=journal_mode(WAL)
+EXPOSE 9000 9001
+ENTRYPOINT ["/app/frp-panel"]
+CMD ["master"]

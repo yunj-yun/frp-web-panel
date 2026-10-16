@@ -1,0 +1,904 @@
+{
+  "app": {
+    "title": "FRP-Panel",
+    "subtitle": "FRP Tunnel Panel",
+    "description": "A multi node frp webui for [FRP] server and client management, which makes this project a [Cloudflare Tunnel] or [Tailscale Funnel] open source alternative",
+    "github": {
+      "navigate": "navigate to:",
+      "repo": "VaalaCat/frp-panel"
+    }
+  },
+  "dashboard": {
+    "eyebrow": "Operations overview",
+    "title": "Infrastructure console",
+    "subtitle": "Monitor nodes, tunnels, and runtime health",
+    "addClient": "New client",
+    "addTunnel": "New tunnel",
+    "manageNodes": "Manage nodes and deployments",
+    "viewTraffic": "View historical traffic",
+    "loadFailed": "Overview data could not be loaded",
+    "loadFailedHint": "Check the Master connection and try again"
+  },
+  "selector": {
+    "common": {
+      "placeholder": "Please select...",
+      "notFound": "No results found",
+      "loading": "Loading..."
+    },
+    "client": {
+      "placeholder": "Client Name"
+    },
+    "proxy": {
+      "notFound": "No tunnel found",
+      "placeholder": "Tunnel name"
+    },
+    "server": {
+      "placeholder": "Server Name"
+    }
+  },
+  "canvas": {
+    "panel": {
+      "clients": "Clients",
+      "servers": "Servers",
+      "confirmClear": "Are you sure you want to clear all interactive nodes? Client and server nodes will not be deleted.",
+      "title": "Visual Canvas",
+      "clear": "Clear Canvas",
+      "exitFullscreen": "Exit Fullscreen",
+      "fullscreen": "Fullscreen",
+      "selectAgent": "Select client or server",
+      "addNode": "Add Node",
+      "nodeCount": "Nodes"
+    },
+    "client": {
+      "unknown": "Unknown Client",
+      "stopped": "Stopped"
+    },
+    "contextMenu": {
+      "openTerminal": "Open Terminal",
+      "openLog": "Open Log"
+    },
+    "log": {
+      "noClient": "No Client Selected",
+      "connected": "Connected",
+      "connecting": "Connecting",
+      "error": "Connection Failed",
+      "stop": "Stop",
+      "start": "Start",
+      "clear": "Clear Log",
+      "selectClient": "Please select a client to view logs"
+    },
+    "server": {
+      "unknown": "Unknown Server",
+      "online": "Online",
+      "offline": "Offline"
+    },
+    "terminal": {
+      "noClient": "No Client Selected",
+      "connected": "Connected",
+      "connecting": "Connecting",
+      "error": "Connection Failed",
+      "refresh": "Refresh Terminal",
+      "clear": "Clear Terminal",
+      "selectClient": "Please select a client to connect"
+    }
+  },
+  "client": {
+    "detail": {
+      "title": "Client Information",
+      "version": "Version",
+      "buildDate": "Build Date",
+      "goVersion": "Go Version",
+      "platform": "Platform",
+      "address": "Client Address",
+      "connectTime": "Connected Since"
+    },
+    "upgrade": {
+      "dispatched": "Upgrade dispatched. Client may go offline briefly.",
+      "failed": "Failed to dispatch upgrade",
+      "title": "Upgrade frp-panel",
+      "warning": "Upgrade will restart client service. Connection may drop briefly (expected).",
+      "version": "Version (default latest)",
+      "download_url": "Download URL (optional, highest priority)",
+      "download_url_placeholder": "e.g. https://ghfast.top/https://github.com/.../frp-panel-linux-amd64",
+      "http_proxy": "HTTP proxy (optional)",
+      "confirm": "Start upgrade"
+    },
+    "status_online": "Online",
+    "status_offline": "Offline",
+    "create": {
+      "submitting": "Creating client...",
+      "error": "Failed to create client",
+      "success": "Client created successfully",
+      "button": "Create",
+      "title": "Create New Client",
+      "description": "Create a new client for connection. Client ID must be unique",
+      "id": "Client ID",
+      "submit": "Create"
+    },
+    "id": "ID (Click for Install Command)",
+    "status": "Configuration Status",
+    "status_configured": "Configured",
+    "status_unconfigured": "Not Configured",
+    "info": "Runtime Info/Version",
+    "secret": "Secret Key (Click for Start Command)",
+    "install": {
+      "title": "Installation Command",
+      "description": "Select your operating system and copy the installation command",
+      "use_github_proxy_url": "Use GitHub Proxy URL",
+      "github_proxy_url": "GitHub Proxy URL",
+      "windows": "Windows",
+      "linux": "Linux"
+    },
+    "need_upgrade": "Need Upgrade",
+    "temp_node": "Temporary",
+    "start": {
+      "title": "Start Command",
+      "description": "Copy and run the following command to start frp-panel client"
+    },
+    "compose": {
+      "title": "Docker Compose",
+      "description": "Linux Docker uses host networking so the container shares the host port space.",
+      "copy": "Copy Compose"
+    },
+    "delete": {
+      "success": "Delete successful",
+      "failed": "Delete failed",
+      "title": "Delete Client",
+      "description": "This action cannot be undone. Are you sure you want to permanently delete this client from our servers?",
+      "warning": "After deletion, running clients will not be able to connect again with existing parameters. If you need to remove client external connections, you can choose to pause the client instead.",
+      "confirm": "Confirm"
+    },
+    "operation": {
+      "stop_success": "Stop successful",
+      "stop_failed": "Stop failed",
+      "start_success": "Start successful",
+      "start_failed": "Start failed",
+      "update_failed": "Update failed",
+      "update_success": "Update successful"
+    },
+    "actions_menu": {
+      "open_menu": "Open Menu",
+      "title": "Client Actions",
+      "copy_success": "Command copied successfully. If copying fails, please click the ID or Secret Key field to copy manually",
+      "copy_failed": "Failed to get platform info. If copying fails, please click the ID or Secret Key field to copy manually",
+      "copy_start_command": "Copy Start Command",
+      "copy_install_command": "Copy Install Service Command",
+      "edit_config": "Edit Configuration",
+      "node_detail": "Node Details",
+      "download_failed": "Failed to get platform info",
+      "download_config": "Download Configuration",
+      "realtime_log": "Real-time Log",
+      "remote_terminal": "Remote Terminal",
+      "upgrade": "Upgrade frp-panel",
+      "pause": "Pause",
+      "resume": "Resume",
+      "delete": "Delete"
+    },
+    "join": {
+      "button": "Batch Configuration",
+      "title": "Batch Configuration",
+      "description": "Download the binary files in advance, run the following command, and the client will automatically generate and save the configuration file.",
+      "sign_token": "Generate Token"
+    },
+    "editor": {
+      "comment_title": "Node {{id}} Comment",
+      "comment_placeholder": "Comment",
+      "config_title": "Client {{id}} Configuration File `frpc.json` Content",
+      "config_description": "Only configure proxies and visitors fields, authentication and server connection information will be completed by the system",
+      "config_placeholder": "Configuration File Content"
+    },
+    "stats": {
+      "title": "Client Statistics",
+      "description": "View client traffic statistics",
+      "label": "Client"
+    },
+    "status_error": "Error",
+    "status_pause": "Paused",
+    "status_unknown": "Unknown"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "stream_log_pkgs_select": "Stream Log From",
+    "download": "Click here to download",
+    "copy": "Copy",
+    "submit": "Submit",
+    "login": "Login",
+    "register": "Register",
+    "userInfo": "User Information",
+    "logout": "Logout",
+    "success": "Success",
+    "add": "Add",
+    "back": "Back",
+    "saving": "Saving...",
+    "save": "Save",
+    "failed": "Failed",
+    "clientType": "Client Type",
+    "disconnect": "Disconnect",
+    "connect": "Connect",
+    "actions": "Actions"
+  },
+  "table": {
+    "pagination": {
+      "rowsPerPage": "rows per page",
+      "page": "Page {{current}} of {{total}}",
+      "navigation": {
+        "first": "Go to first page",
+        "previous": "Go to previous page",
+        "next": "Go to next page",
+        "last": "Go to last page"
+      }
+    },
+    "filter": {
+      "placeholder": "Filter by {{column}}"
+    },
+    "noData": "No data",
+    "columns": "Columns"
+  },
+  "input": {
+    "keyword": {
+      "placeholder": "Enter keyword"
+    },
+    "search": "Search",
+    "list": {
+      "placeholder": "Please enter ...",
+      "add": "Add"
+    }
+  },
+  "traffic": {
+    "chart": {
+      "inbound": "Inbound",
+      "today": "Today",
+      "history": "History",
+      "outbound": "Outbound",
+      "title": "Traffic Details",
+      "pie": {
+        "inbound": "Inbound",
+        "outbound": "Outbound"
+      }
+    },
+    "today": {
+      "inbound": "Today's Inbound",
+      "outbound": "Today's Outbound",
+      "total": "Today's Total"
+    },
+    "history": {
+      "inbound": "Historical Inbound",
+      "outbound": "Historical Outbound",
+      "total": "Historical Total"
+    },
+    "historyRange": {
+      "title": "Traffic history",
+      "description": "Review daily inbound and outbound traffic with quick ranges or custom dates.",
+      "oneDay": "Last 1 day",
+      "threeDays": "Last 3 days",
+      "sevenDays": "Last 7 days",
+      "thirtyDays": "Last 30 days",
+      "custom": "Custom",
+      "start": "Start date",
+      "end": "End date",
+      "days": "Days with data",
+      "selectClient": "Select a client to view traffic history",
+      "loadFailed": "Failed to load traffic history",
+      "empty": "No traffic history for the selected dates"
+    }
+  },
+  "frpc": {
+    "client_plugins": {
+      "plugin_type": "Plugin Type",
+      "select_plugin_type": "Please Select a Plugin",
+      "http_local_addr": "HTTP Local Address",
+      "http_host_header_rewrite": "HTTP Host Header Rewrite",
+      "http_user": "HTTP User",
+      "http_password": "HTTP Password"
+    },
+    "form": {
+      "title": "Edit Client",
+      "description": {
+        "warning": "Warning⚠️: The selected 'Server' must be configured in advance!",
+        "instruction": "Select client and server to edit configuration"
+      },
+      "advanced": {
+        "title": "Advanced Mode",
+        "description": "Edit client raw configuration file"
+      },
+      "server": "Server",
+      "client": "Client",
+      "frps_url": {
+        "title": "FRP server override address - Optional",
+        "hint": "You can override the server address stored in the master to handle the inconsistency between the domain name/IP/port and the real port during port forwarding or reverse proxy/CDN. Format: [tcp/kcp/websocket]://127.0.0.1:7000"
+      },
+      "comment": {
+        "title": "Node {{id}} Comment",
+        "hint": "You can modify the comment in advanced mode!",
+        "empty": "Nothing here"
+      }
+    },
+    "plugins": {
+      "local_addr": "Local Address",
+      "host_header_rewrite": "Host Header Rewrite",
+      "crt_path": "Certificate Path",
+      "key_path": "Key Path",
+      "username": "Username",
+      "password": "Password",
+      "local_path": "Local Path",
+      "strip_prefix": "Strip Prefix",
+      "http_user": "HTTP User",
+      "http_password": "HTTP Password",
+      "unix_domain_socket_path": "Unix Domain Socket Path"
+    }
+  },
+  "proxy": {
+    "status": {
+      "create": "Create Tunnel Status",
+      "name_exists": "Name already exists",
+      "update": "Update Tunnel Status",
+      "success": "Update successful",
+      "error": "Update failed"
+    },
+    "form": {
+      "add": "Add Tunnel",
+      "name": "Name",
+      "protocol": "Protocol",
+      "type": "Type",
+      "confirm": "Confirm",
+      "config": "Tunnel Configuration",
+      "expand_one": "Expand one",
+      "expand_other": "Expand other",
+      "delete": "Delete",
+      "tunnel_name": "Tunnel Name",
+      "type_label": "Type: [{{type}}]",
+      "submit": "Submit Changes",
+      "access_method": "Access Method",
+      "local_port": "Local Port",
+      "local_ip": "Local IP",
+      "remote_port": "Remote Port",
+      "use_plugin": "Use Plugin",
+      "save_changes": "Save Changes",
+      "secret_key": "Secret Key",
+      "subdomain": "Subdomain",
+      "custom_domains": "Custom Domains",
+      "domain_description": "Subdomain and custom domain can be configured at the same time, but at least one of them must be not empty. If frps is configured with domain suffix, the custom domain cannot be a subdomain or wildcard domain of the domain suffix.",
+      "more_settings": "More Settings",
+      "route": "Route",
+      "enable_http_auth": "Enable HTTP Authentication",
+      "username": "Username",
+      "password": "Password",
+      "subdomain_placeholder": "Input Subdomain"
+    },
+    "type": {
+      "http": "HTTP",
+      "tcp": "TCP",
+      "udp": "UDP",
+      "stcp": "STCP"
+    },
+    "config": {
+      "create": "Create",
+      "create_proxy": "Create Tunnel",
+      "create_proxy_description": "Expose the client's services to the server. The same client tunnel name must be unique",
+      "create_success": "Create successful",
+      "create_failed": "Create failed",
+      "select_server": "Select Server",
+      "select_client": "Select Client",
+      "advanced_mode": "Advanced Mode",
+      "select_proxy_type": "Select Tunnel Type",
+      "proxy_name": "Tunnel Name",
+      "raw_json": "Original Config",
+      "invalid_json": "Json Invalid",
+      "draft": "Draft",
+      "invalid_config": "Invalid configuration",
+      "submit": "Submit"
+    },
+    "action": {
+      "delete_success": "Delete Successful",
+      "delete_failed": "Delete Failed",
+      "stop_success": "Stop Successful",
+      "stop_failed": "Stop Failed",
+      "start_success": "Start Successful",
+      "start_failed": "Start Failed",
+      "edit": "Edit",
+      "delete": "Delete",
+      "delete_tunnel": "Delete Tunnel",
+      "delete_attention_title": "Tunnel will be permanently deleted, please confirm",
+      "delete_attention_description": "After deletion, Tunnel will not be recovered, please be careful",
+      "delete_attention_confirm": "Confirm",
+      "title": "Tunnel Operation"
+    },
+    "item": {
+      "proxy_name": "Tunnel Name",
+      "proxy_type": "Tunnel Type",
+      "client_id": "Client ID",
+      "server_id": "Server ID",
+      "status": "Status",
+      "visit_preview": "Visit Preview"
+    },
+    "stats": {
+      "label": "Tunnel Name",
+      "tunnel_traffic": "Tunnel: {{name}}"
+    }
+  },
+  "server": {
+    "configuration": "Server Configuration",
+    "warning": {
+      "title": "Warning⚠️: The server will exit after modifying the configuration file",
+      "dockerHint": "If you are using a docker container with --restart=unless-stopped or --restart=always in the startup command, there's no need to worry.",
+      "systemdHint": "If you are using systemd installation, there's no need to worry."
+    },
+    "selectHint": "Select a server to manage Frps service",
+    "advancedMode": {
+      "title": "Advanced Mode",
+      "description": "Edit server raw configuration file"
+    },
+    "serverLabel": "Server",
+    "frpsUrl": {
+      "title": "FRP server override address - Optional",
+      "description": "Clients can use this address to connect instead of the default IP. This is useful for port forwarding/CDN/reverse proxy. Format: [tcp/kcp/websocket]://127.0.0.1:7000"
+    },
+    "operation": {
+      "update_failed": "Update failed",
+      "update_success": "Update successful",
+      "update_title": "Update Server Status"
+    },
+    "editor": {
+      "comment": "Node {{id}} Comment",
+      "comment_placeholder": "Comment",
+      "config_title": "Node {{id}} Configuration File `frps.json` Content",
+      "config_description": "Only configure port and IP fields, authentication information will be completed by the system",
+      "config_placeholder": "Configuration File Content"
+    },
+    "form": {
+      "comment_title": "Node {{id}} Comment",
+      "comment_hint": "You can modify the comment in advanced mode!",
+      "comment_empty": "Empty",
+      "public_host": "Public Host",
+      "bind_port": "FRPs Listen Port",
+      "bind_addr": "FRPs Listen Address",
+      "proxy_bind_addr": "Proxy Listen Address",
+      "vhost_http_port": "HTTP Listen Port",
+      "subdomain_host": "Subdomain Host",
+      "quic_bind_port": "Quic Bind Port",
+      "kcp_bind_port": "KCP Bind Port"
+    },
+    "create": {
+      "submitting": "Creating server...",
+      "error": "Failed to create server",
+      "success": "Server created successfully",
+      "button": "Create",
+      "title": "Create New Server",
+      "description": "Create a new server for providing service. Server ID must be unique",
+      "id": "Server ID",
+      "ip": "IP Address/Domain",
+      "submit": "Create"
+    },
+    "id": "ID (Click for install command)",
+    "status": "Configuration Status",
+    "status_configured": "Configured",
+    "status_unconfigured": "Unconfigured",
+    "info": "Running Info/Version",
+    "ip": "IP Address",
+    "secret": "Secret (Click for start command)",
+    "install": {
+      "title": "Install Command",
+      "description": "Please select your operating system and copy the corresponding installation command",
+      "windows": "Windows",
+      "linux": "Linux"
+    },
+    "start": {
+      "title": "Start Command",
+      "description": "Copy and run the following command to start frp-panel server"
+    },
+    "compose": {
+      "title": "Docker Compose",
+      "description": "Linux Docker uses host networking so the container shares the host port space; the Server Compose also starts Caddy and persists its config and certificate data. Set FRPS vhostHTTPPort to another free port.",
+      "copy": "Copy Compose"
+    },
+    "delete": {
+      "success": "Delete successful",
+      "failed": "Delete failed",
+      "title": "Delete Server?",
+      "description": "This action cannot be undone. Are you sure you want to permanently delete this server from our servers?",
+      "warning": "After deletion, running servers will not be able to connect again with existing parameters. If you need to delete server connections, you can choose to pause the server",
+      "confirm": "Confirm"
+    },
+    "actions_menu": {
+      "open_menu": "Open Menu",
+      "title": "Server Actions",
+      "copy_success": "Copy successful, if copy failed, please click ID field to copy manually",
+      "copy_failed": "Failed to get platform info, if copy failed, please click ID field to copy manually",
+      "copy_command": "Copy Start Command",
+      "edit_config": "Edit Configuration",
+      "node_detail": "Node Details",
+      "download_failed": "Failed to get platform info",
+      "download_config": "Download Configuration",
+      "realtime_log": "Real-time Log",
+      "remote_terminal": "Remote Terminal",
+      "delete": "Delete"
+    },
+    "status_online": "Online",
+    "status_offline": "Offline",
+    "status_error": "Error",
+    "status_unknown": "Unknown",
+    "status_pause": "Paused"
+  },
+  "auth": {
+    "loggingIn": "Logging in, please wait",
+    "loginSuccess": "Login successful, redirecting to home page",
+    "loginFailed": "Login failed, please try again",
+    "usernamePlaceholder": "Username",
+    "password": "Password",
+    "passwordPlaceholder": "••••••••",
+    "error": "Error",
+    "registering": "Registering, please wait",
+    "registerSuccess": "Registration successful, redirecting to login",
+    "registerFailed": "Registration failed, please try again",
+    "emailPlaceholder": "Email address",
+    "loginTitle": "Login",
+    "inputCredentials": "Enter your credentials",
+    "noAccount": "Don't have an account?",
+    "register": "Register",
+    "registerTitle": "Register",
+    "haveAccount": "Already have an account?",
+    "login": "Login"
+  },
+  "settings": {
+    "header": {
+      "title": "Platform Settings",
+      "description": "Modify frontend platform settings",
+      "note": "This configuration is stored locally only"
+    },
+    "toast": {
+      "updateSuccess": "Platform settings updated"
+    },
+    "loading": {
+      "platform": "Loading platform settings"
+    },
+    "form": {
+      "useServerGithubLabel": "Use server GitHub proxy",
+      "useServerGithubDescription": "If enabled, download using the backend configured proxy",
+      "githubProxyLabel": "Custom GitHub proxy URL",
+      "githubProxyPlaceholder": "e.g. https://ghproxy.com/",
+      "clientApiLabel": "Custom API URL",
+      "clientApiPlaceholder": "e.g. https://api.example.com/",
+      "clientRpcLabel": "Custom RPC URL",
+      "clientRpcPlaceholder": "e.g. https://rpc.example.com/"
+    },
+    "actions": {
+      "saveChanges": "Save changes"
+    },
+    "dialog": {
+      "confirmSaveTitle": "Confirm Save",
+      "confirmSaveDescription": "Are you sure you want to save the changes?",
+      "cancel": "Cancel",
+      "confirm": "Confirm"
+    }
+  },
+  "platform": {
+    "configuredServers": "Configured Servers",
+    "unit": " ",
+    "menuHint": "Please modify in the left menu",
+    "configuredClients": "Configured Clients",
+    "unconfiguredServers": "Unconfigured Servers",
+    "unconfiguredClients": "Unconfigured Clients",
+    "totalServers": "Total Servers",
+    "totalClients": "Total Clients",
+    "openDetail": "Open details"
+  },
+  "ports": {
+    "title": "Port Monitor",
+    "updatedEvery": "Listening port snapshots refresh every 30 seconds",
+    "nodeType": "Node type",
+    "client": "Client",
+    "server": "Server",
+    "node": "Node",
+    "online": "Online",
+    "offline": "Offline",
+    "checking": "Checking status",
+    "selectNode": "Select a client or server to inspect listening ports",
+    "loadFailed": "Failed to load port snapshot",
+    "noSnapshot": "No port snapshot yet",
+    "noSnapshotHint": "Port details appear after the node comes online and reports its first snapshot. Process names may be unavailable due to system permissions.",
+    "totalListeners": "Listening ports",
+    "lastScan": "Last scanned",
+    "protocol": "Protocol",
+    "address": "Listen address",
+    "port": "Port",
+    "process": "Process",
+    "unknownProcess": "Unknown process",
+    "search": "Search address, port, or process",
+    "noMatches": "No ports match this filter",
+    "protocols": {
+      "all": "All",
+      "tcp": "TCP",
+      "udp": "UDP"
+    }
+  },
+  "certificates": {
+    "title": "Certificate Center",
+    "description": "Manage HTTPS certificates issued and renewed by Caddy on target servers",
+    "pendingNotice": "Point DNS records to the target server manually. After registration, the Server Caddy Agent will execute the ACME request.",
+    "create": "Register certificate",
+    "edit": "Edit certificate",
+    "name": "Name",
+    "namePlaceholder": "For example: Main site certificate",
+    "domains": "Domains",
+    "domainsPlaceholder": "One per line or comma-separated, e.g. app.example.com",
+    "server": "Target server",
+    "challenge": "Challenge",
+    "http01": "HTTP-01 (port 80 required)",
+    "tlsAlpn01": "TLS-ALPN-01 (port 443 required)",
+    "autoRenew": "Automatic renewal",
+    "save": "Save",
+    "request": "Request certificate",
+    "delete": "Delete",
+    "confirmDelete": "Delete this certificate?",
+    "empty": "No managed certificates",
+    "emptyHint": "Register a domain and target server, then let the Caddy Agent execute the ACME request.",
+    "domain": "Domain",
+    "status": "Status",
+    "serverColumn": "Server",
+    "challengeColumn": "Challenge",
+    "expiresAt": "Expires",
+    "notIssued": "Not issued",
+    "statusPending": "Pending",
+    "statusReady": "Issued",
+    "statusRenewing": "Renewing",
+    "statusExpired": "Expired",
+    "statusError": "Error",
+    "statusRevoked": "Revoked",
+    "saveSuccess": "Certificate configuration saved",
+    "requestQueued": "Certificate request queued for the Caddy Agent",
+    "operationFailed": "Operation failed",
+    "loadFailed": "Failed to load certificates"
+  },
+  "gateways": {
+    "title": "HTTPS Gateways",
+    "description": "Forward a Caddy HTTPS hostname to an FRP HTTP tunnel",
+    "notice": "Manage DNS records manually in Cloudflare. Caddy terminates public HTTPS on the target server, then forwards through FRP vhostHTTPPort to the client service.",
+    "create": "New gateway",
+    "edit": "Edit gateway",
+    "save": "Save gateway",
+    "domain": "HTTPS domain",
+    "server": "Target server",
+    "listenPort": "Listen port",
+    "httpTunnel": "HTTP tunnel",
+    "certificate": "Certificate",
+    "selectTunnel": "Select an HTTP tunnel",
+    "selectCertificate": "Select a certificate",
+    "tunnelDomains": "Tunnel domains",
+    "noHttpTunnel": "No available HTTP tunnels on this server",
+    "noCertificate": "No available certificates on this server",
+    "upstream": "FRP upstream",
+    "status": "Status",
+    "lastApplied": "Last applied",
+    "statusPending": "Pending",
+    "statusActive": "Active",
+    "statusError": "Sync failed",
+    "statusDisabled": "Disabled",
+    "sync": "Sync again",
+    "delete": "Delete",
+    "confirmDelete": "Delete this HTTPS gateway?",
+    "dialogDescription": "Choose an HTTP tunnel and certificate on the same server. Caddy will renew the certificate automatically after issuance.",
+    "empty": "No HTTPS gateways",
+    "emptyHint": "Create a gateway and Caddy will request the domain certificate and forward traffic to the FRP HTTP tunnel.",
+    "saved": "Gateway configuration saved",
+    "updated": "Gateway synchronization queued",
+    "operationFailed": "Gateway operation failed",
+    "loadFailed": "Failed to load gateways"
+  },
+  "refresh": {
+    "data": "Refresh Data"
+  },
+  "team": {
+    "title": "Teams"
+  },
+  "userInfo": {
+    "profileUpdated": "Profile Updated",
+    "updateFailed": "Update Failed",
+    "loading": "Loading",
+    "yourProfile": "Your Profile",
+    "manageAccountDetails": "Manage Account Details",
+    "userID": "User ID",
+    "tenantID": "Tenant ID",
+    "name": "Name",
+    "placeholderName": "Enter your name",
+    "email": "Email",
+    "placeholderEmail": "Enter your email",
+    "role": "Role",
+    "roleDescription": "Administrator(admin) or Normal User(normal)",
+    "changePassword": "Change Password",
+    "newPassword": "New Password",
+    "placeholderNewPassword": "Enter your new password",
+    "confirmPassword": "Confirm Password",
+    "placeholderConfirmNewPassword": "Confirm your new password",
+    "saveChanges": "Save Changes",
+    "confirmSaveTitle": "Confirm Save",
+    "confirmSaveDescription": "Are you sure you want to save your changes?",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "worker": {
+    "client_install_workerd": {
+      "success": "Workerd installed successfully",
+      "error": "Failed to install Workerd",
+      "title": "Install Workerd",
+      "description": "Install Workerd binary from url to Client",
+      "download_url": "Workerd Binary Download URL",
+      "placeholder": "Enter the download URL",
+      "button": "Install"
+    },
+    "status_running": "Running",
+    "status_stopped": "Stopped",
+    "status_error": "Error",
+    "status_unknown": "Unknown",
+    "deploy": {
+      "title": "Deploy",
+      "add_client": "Add Deployment",
+      "select_client": "Select Client",
+      "client_description": "Select a client to deploy",
+      "no_clients": "No clients available"
+    },
+    "edit": {
+      "save_success": "Changes saved successfully",
+      "save_error": "Failed to save changes",
+      "title": "Edit Worker",
+      "info_tab": "Worker Info",
+      "code_tab": "Code",
+      "template_tab": "Template"
+    },
+    "info": {
+      "basic_info": "Basic Information",
+      "info_description": "You can edit the basic information",
+      "worker_id": "Worker ID",
+      "worker_name": "Worker Name",
+      "name_placeholder": "Enter worker name",
+      "resources": "Resources",
+      "clients": "Deployments",
+      "ingresses": "Ingresses"
+    },
+    "ingress": {
+      "create_success": "Ingress created successfully",
+      "create_failed": "Failed to create ingress",
+      "client_required": "Client is required",
+      "server_required": "Server is required",
+      "select_client": "Select Client",
+      "select_server": "Select Server",
+      "creating": "Creating Ingress...",
+      "create_submit": "Create Ingress",
+      "title": "Ingress",
+      "create": "Create Ingress",
+      "create_title": "Create Ingress",
+      "create_description": "Create a new Ingress",
+      "no_ingress": "No Ingresses",
+      "edit": "Edit Ingress",
+      "delete": {
+        "title": "Delete Ingress",
+        "description": "Are you sure you want to delete this ingress?",
+        "button": "Delete"
+      },
+      "delete_success": "Ingress deleted successfully",
+      "delete_description": "Ingress deleted successfully"
+    },
+    "create": {
+      "success": "Create Success",
+      "error": "Create Error",
+      "button": "Create Worker",
+      "title": "Create Worker",
+      "description": "Create a new Worker",
+      "clientIdLabel": "Client ID",
+      "nameLabel": "Worker Name",
+      "namePlaceholder": "Enter Worker Name",
+      "creating": "Creating Worker...",
+      "submit": "Create Worker"
+    },
+    "columns": {
+      "name": "Name",
+      "status": "Status",
+      "id": "ID"
+    },
+    "actions_menu": {
+      "delete": "Delete Worker",
+      "redeploy_worker": "Re-deploy Worker",
+      "title": "Worker Actions",
+      "edit": "Edit Worker"
+    },
+    "delete": {
+      "title": "Delete Worker",
+      "description": "Are you sure you want to delete this worker?",
+      "confirm": "Delete Worker"
+    },
+    "status": {
+      "no_resources": "No Resources",
+      "unusable": "Unusable",
+      "unhealthy": "Unhealthy",
+      "healthy": "Healthy",
+      "degraded": "Degraded",
+      "clients": "Deployments",
+      "ingresses": "Ingresses",
+      "running": "Running"
+    },
+    "status_text": "Status"
+  },
+  "status": {
+    "new": "New",
+    "wait_start": "Waiting to Start",
+    "start_error": "Start Error",
+    "running": "Running",
+    "check_failed": "Check Failed",
+    "error": "Error",
+    "unknown": "Unknown"
+  },
+  "nodeDetail": {
+    "back": "Back",
+    "client": "Client Details",
+    "server": "Server Details",
+    "missing": "No node selected",
+    "online": "Online",
+    "offline": "Offline",
+    "unknown": "Unknown",
+    "refresh": "Refresh",
+    "logs": "Real-time Log",
+    "terminal": "Remote Terminal",
+    "edit": "Edit Configuration",
+    "loadFailed": "Failed to load node information",
+    "retry": "Retry",
+    "connection": "Connection",
+    "address": "Connection Address",
+    "latency": "Latency",
+    "connectedAt": "Connected Since",
+    "agent": "Agent Information",
+    "platform": "Platform",
+    "goVersion": "Go Version",
+    "lastSeen": "Last Heartbeat",
+    "deployment": "Deployment",
+    "network": "Network Mode",
+    "hostNetwork": "Linux host",
+    "composeHint": "Copy the Compose file and start it on the target node.",
+    "composeUnavailable": "Platform information is required to generate Compose.",
+    "copyCompose": "Copy Compose",
+    "copied": "Compose copied",
+    "ports": "Port Snapshot",
+    "lastScan": "Last scan: {{time}}",
+    "noScan": "No port snapshot received yet",
+    "portsFailed": "Failed to load port snapshot",
+    "noPorts": "No listening ports found",
+    "protocol": "Protocol",
+    "listenAddress": "Listen Address",
+    "port": "Port",
+    "process": "Process"
+  },
+  "nav": {
+    "clients": "Clients",
+    "servers": "Servers",
+    "ports": "Port Monitor",
+    "certificates": "Certificates",
+    "gateways": "HTTPS Gateways",
+    "editTunnel": "Edit Tunnel",
+    "editClient": "Edit Client",
+    "editServer": "Edit Server",
+    "trafficStats": "Traffic Stats",
+    "realTimeLog": "Real-time Log",
+    "console": "Console",
+    "workers": "Functions"
+  },
+  "frpc_form": {
+    "add": "Add Client",
+    "name": "Name",
+    "protocol": "Protocol",
+    "type": "Type",
+    "confirm": "Confirm",
+    "config": "Client Configuration",
+    "expand": "Click to expand {{count}} clients",
+    "client_name": "Client Name",
+    "delete": "Delete",
+    "type_label": "Type: [{{type}}]",
+    "access_method": "Access Method",
+    "local_port": "Local Port",
+    "remote_port": "Remote Port",
+    "local_ip": "Local IP",
+    "subdomain": "Subdomain",
+    "secret_key": "Secret Key",
+    "save": "Save",
+    "save_success": "Save successful",
+    "save_error": "Save failed"
+  }
+}

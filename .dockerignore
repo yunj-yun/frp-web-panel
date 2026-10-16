@@ -1,0 +1,16 @@
+.git
+**/.DS_Store
+**/._*
+**/node_modules
+**/.next
+**/out
+**/dist
+**/coverage
+**/*.tsbuildinfo
+**/*.log
+**/*.db*
+**/*.tgz
+**/.env
+**/.env.*
+tmp
+deploy/test/data

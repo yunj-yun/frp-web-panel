@@ -1,0 +1,719 @@
+{
+  "app": {
+    "title": "FRP-Panel",
+    "subtitle": "FRP 隧道面板",
+    "description": "一個多節點的 FRP WebUI，用於 [FRP] 服務端和客戶端管理，是 [Cloudflare Tunnel] 和 [Tailscale Funnel] 的開源替代方案",
+    "github": {
+      "navigate": "項目地址：",
+      "repo": "VaalaCat/frp-panel"
+    }
+  },
+  "selector": {
+    "common": {
+      "placeholder": "請選擇...",
+      "notFound": "未找到結果",
+      "loading": "加載中..."
+    },
+    "client": {
+      "placeholder": "客戶端名稱"
+    },
+    "proxy": {
+      "notFound": "未找到隧道",
+      "placeholder": "隧道名稱"
+    },
+    "server": {
+      "placeholder": "服務端名稱"
+    }
+  },
+  "canvas": {
+    "panel": {
+      "clients": "客戶端",
+      "servers": "服務器",
+      "confirmClear": "確定要清空所有互動節點嗎？客戶端和服務器節點不會被刪除。",
+      "title": "Canvas",
+      "clear": "清空畫布",
+      "exitFullscreen": "退出全螢幕",
+      "fullscreen": "全螢幕顯示",
+      "selectAgent": "選擇客戶端或服務器",
+      "addNode": "新增節點",
+      "nodeCount": "節點數"
+    },
+    "client": {
+      "unknown": "未知客戶端",
+      "stopped": "已停止"
+    },
+    "contextMenu": {
+      "openTerminal": "開啟終端機",
+      "openLog": "開啟日誌"
+    },
+    "log": {
+      "noClient": "未選擇客戶端",
+      "connected": "已連線",
+      "connecting": "連線中",
+      "error": "連線失敗",
+      "stop": "停止",
+      "start": "開始",
+      "clear": "清空日誌",
+      "selectClient": "請選擇要檢視日誌的客戶端"
+    },
+    "server": {
+      "unknown": "未知服務器",
+      "online": "在線",
+      "offline": "離線"
+    },
+    "terminal": {
+      "noClient": "未選擇客戶端",
+      "connected": "已連線",
+      "connecting": "連線中",
+      "error": "連線失敗",
+      "refresh": "重新整理終端機",
+      "clear": "清空終端機",
+      "selectClient": "請選擇要連線的客戶端"
+    }
+  },
+  "client": {
+    "detail": {
+      "title": "客戶端信息",
+      "version": "版本",
+      "buildDate": "編譯時間",
+      "goVersion": "Go版本",
+      "platform": "客戶端平台",
+      "address": "客戶端地址",
+      "connectTime": "連接時間"
+    },
+    "upgrade": {
+      "dispatched": "升級任務已下發，客戶端可能短時離線",
+      "failed": "升級任務下發失敗",
+      "title": "升級客戶端",
+      "warning": "此操作無法撤消。您確定要升級該客戶端?",
+      "version": "版本",
+      "download_url": "下載地址",
+      "download_url_placeholder": "例如：https://ghfast.top/https://github.com/.../frp-panel-linux-amd64",
+      "http_proxy": "HTTP代理",
+      "confirm": "確定升級"
+    },
+    "status_online": "在線",
+    "status_offline": "離線",
+    "create": {
+      "submitting": "正在創建客戶端...",
+      "error": "創建客戶端失敗",
+      "success": "創建客戶端成功",
+      "button": "新建",
+      "title": "新建客戶端",
+      "description": "創建新的客戶端用於連接，客戶端ID必須唯一",
+      "id": "客戶端ID",
+      "submit": "創建"
+    },
+    "id": "ID (點擊查看安裝命令)",
+    "status": "配置狀態",
+    "status_configured": "已配置",
+    "status_unconfigured": "未配置",
+    "info": "運行時信息/版本",
+    "secret": "密鑰 (點擊查看啟動命令)",
+    "install": {
+      "title": "安裝命令",
+      "description": "請選擇您的操作系統並覆制相應的安裝命令",
+      "use_github_proxy_url": "使用 GitHub 代理",
+      "github_proxy_url": "GitHub 代理 URL",
+      "windows": "Windows",
+      "linux": "Linux"
+    },
+    "need_upgrade": "需要升級",
+    "temp_node": "臨時",
+    "start": {
+      "title": "啟動命令",
+      "description": "覆制並運行以下命令來啟動 frp-panel 客戶端"
+    },
+    "delete": {
+      "success": "刪除成功",
+      "failed": "刪除失敗",
+      "title": "確定刪除該客戶端?",
+      "description": "此操作無法撤消。您確定要永久從我們的服務器中刪除該客戶端?",
+      "warning": "刪除後運行中的客戶端將無法通過現有參數再次連接，如果您需要刪除客戶端對外的連接，可以選擇暫停客戶端",
+      "confirm": "確定"
+    },
+    "operation": {
+      "stop_success": "停止成功",
+      "stop_failed": "停止失敗",
+      "start_success": "啟動成功",
+      "start_failed": "啟動失敗",
+      "update_failed": "更新失敗",
+      "update_success": "更新成功"
+    },
+    "actions_menu": {
+      "open_menu": "打開菜單",
+      "title": "客戶端操作",
+      "copy_success": "命令覆制成功，如果覆制失敗，請點擊 ID/密鑰 字段手動覆制",
+      "copy_failed": "獲取平台信息失敗，如果覆制不成功，請點擊 ID/密鑰 字段手動覆制",
+      "copy_start_command": "覆制啟動命令",
+      "copy_install_command": "覆制服務安裝命令",
+      "edit_config": "修改配置",
+      "download_failed": "獲取平台信息失敗",
+      "download_config": "下載配置",
+      "realtime_log": "實時日志",
+      "remote_terminal": "遠程終端",
+      "upgrade": "升級客戶端",
+      "pause": "暫停",
+      "resume": "啟動",
+      "delete": "刪除"
+    },
+    "join": {
+      "button": "批量配置",
+      "title": "批量配置",
+      "description": "提前下載好二進制文件，運行以下命令，client 將自動生成配置文件保存",
+      "sign_token": "生成令牌"
+    },
+    "editor": {
+      "comment_title": "節點 {{id}} 的備注",
+      "comment_placeholder": "備注",
+      "config_title": "客戶端 {{id}} 配置文件`frpc.json`內容",
+      "config_description": "只需要配置proxies和visitors字段，認證信息和服務器連接信息會由系統補全",
+      "config_placeholder": "配置文件內容"
+    },
+    "stats": {
+      "title": "客戶端統計",
+      "description": "查看客戶端流量統計信息",
+      "label": "客戶端"
+    },
+    "status_error": "錯誤",
+    "status_pause": "已暫停",
+    "status_unknown": "未知"
+  },
+  "common": {
+    "cancel": "取消",
+    "loading": "載入中...",
+    "stream_log_pkgs_select": "捕獲日志的模塊",
+    "download": "點擊這里下載",
+    "copy": "覆制",
+    "submit": "提交",
+    "login": "登錄",
+    "register": "注冊",
+    "userInfo": "用戶信息",
+    "logout": "退出登錄",
+    "success": "成功",
+    "add": "添加",
+    "back": "返回",
+    "saving": "保存中",
+    "save": "保存",
+    "failed": "失敗",
+    "clientType": "客戶端類型",
+    "disconnect": "斷開連接",
+    "connect": "連接"
+  },
+  "table": {
+    "pagination": {
+      "rowsPerPage": "行 每頁",
+      "page": "第 {{current}} 頁, 共 {{total}} 頁",
+      "navigation": {
+        "first": "第一頁",
+        "previous": "前一頁",
+        "next": "下一頁",
+        "last": "最後頁"
+      }
+    },
+    "filter": {
+      "placeholder": "根據 {{column}} 篩選"
+    },
+    "noData": "沒有數據",
+    "columns": "欄位選擇"
+  },
+  "input": {
+    "keyword": {
+      "placeholder": "請輸入關鍵詞"
+    },
+    "search": "搜索",
+    "list": {
+      "placeholder": "請輸入...",
+      "add": "添加"
+    }
+  },
+  "traffic": {
+    "chart": {
+      "inbound": "入站",
+      "today": "今日",
+      "history": "歷史",
+      "outbound": "出站",
+      "title": "流量詳情",
+      "pie": {
+        "inbound": "入站",
+        "outbound": "出站"
+      }
+    },
+    "today": {
+      "inbound": "今日入站",
+      "outbound": "今日出站",
+      "total": "今日總流量"
+    },
+    "history": {
+      "inbound": "歷史入站",
+      "outbound": "歷史出站",
+      "total": "歷史總流量"
+    }
+  },
+  "frpc": {
+    "client_plugins": {
+      "plugin_type": "插件類型",
+      "select_plugin_type": "選擇插件類型",
+      "http_local_addr": "HTTP 本地地址",
+      "http_host_header_rewrite": "HTTP 主機頭重寫",
+      "http_user": "HTTP 用戶名",
+      "http_password": "HTTP 密碼"
+    },
+    "form": {
+      "title": "編輯客戶端",
+      "description": {
+        "warning": "注意⚠️：選擇的「服務端」必須提前配置！",
+        "instruction": "選擇客戶端和服務端以配置"
+      },
+      "advanced": {
+        "title": "高級模式",
+        "description": "編輯客戶端原始配置文件"
+      },
+      "server": "服務端",
+      "client": "客戶端",
+      "frps_url": {
+        "title": "FRP 服務端覆蓋地址 - 可選",
+        "hint": "可以覆蓋 master 存儲的服務端地址，用於處理端口轉發或反向代理/CDN時，域名/IP/端口和真實端口不一致的問題。格式：[tcp/kcp/websocket]://127.0.0.1:7000"
+      },
+      "comment": {
+        "title": "節點 {{id}} 的備注",
+        "hint": "可以到高級模式修改備注哦！",
+        "empty": "空空如也"
+      }
+    },
+    "plugins": {
+      "local_addr": "本地地址",
+      "host_header_rewrite": "主機頭重寫",
+      "crt_path": "證書路徑",
+      "key_path": "密鑰路徑",
+      "username": "用戶名",
+      "password": "密碼",
+      "local_path": "本地路徑",
+      "strip_prefix": "前綴去除",
+      "http_user": "HTTP 用戶名",
+      "http_password": "HTTP 密碼",
+      "unix_domain_socket_path": "Unix 域套接字路徑"
+    }
+  },
+  "proxy": {
+    "status": {
+      "create": "創建隧道狀態",
+      "name_exists": "名稱重覆",
+      "update": "更新隧道狀態",
+      "success": "更新成功",
+      "error": "更新失敗"
+    },
+    "form": {
+      "add": "新增隧道",
+      "name": "名稱",
+      "protocol": "協議",
+      "type": "類型",
+      "confirm": "確定",
+      "config": "隧道配置",
+      "expand_other": "展開其他",
+      "delete": "刪除",
+      "tunnel_name": "隧道名稱",
+      "type_label": "類型:「{{type}}」",
+      "submit": "提交變更",
+      "access_method": "訪問方式",
+      "local_port": "本地端口",
+      "local_ip": "本地IP",
+      "remote_port": "遠程端口",
+      "use_plugin": "使用插件",
+      "save_changes": "暫存修改",
+      "secret_key": "密鑰",
+      "subdomain": "子域名",
+      "custom_domains": "自定義域名",
+      "domain_description": "「子域名」和「自定義域名」可以同時配置，但二者至少有一個不為空。如果 frps 配置了「域名後綴」，則「自定義域名」中不能是屬於「域名後綴」的「子域名」或者「泛域名」",
+      "more_settings": "更多設置",
+      "route": "路由",
+      "enable_http_auth": "啟用 HTTP 認證",
+      "username": "用戶名",
+      "password": "密碼",
+      "subdomain_placeholder": "請輸入子域名"
+    },
+    "type": {
+      "http": "HTTP",
+      "tcp": "TCP",
+      "udp": "UDP",
+      "stcp": "STCP"
+    },
+    "config": {
+      "create": "創建",
+      "create_proxy": "創建隧道",
+      "create_proxy_description": "將客戶端的服務暴露在服務端，同一個客戶端隧道名稱必須唯一",
+      "create_success": "創建成功",
+      "create_failed": "創建失敗",
+      "select_server": "選擇服務器",
+      "select_client": "選擇客戶端",
+      "advanced_mode": "高級模式",
+      "select_proxy_type": "選擇隧道類型",
+      "proxy_name": "隧道名稱",
+      "raw_json": "原始配置文件",
+      "invalid_json": "JSON非法",
+      "draft": "暫存",
+      "invalid_config": "配置不正確",
+      "submit": "提交"
+    },
+    "action": {
+      "delete_success": "刪除成功",
+      "delete_failed": "刪除失敗",
+      "stop_success": "停止成功",
+      "stop_failed": "停止失敗",
+      "start_success": "啟動成功",
+      "start_failed": "啟動失敗",
+      "edit": "編輯",
+      "delete": "刪除",
+      "delete_tunnel": "刪除隧道",
+      "delete_attention_title": "隧道將被永久刪除，請確認",
+      "delete_attention_description": "刪除後將無法恢覆，請謹慎操作",
+      "delete_attention_confirm": "確認刪除",
+      "title": "隧道操作"
+    },
+    "item": {
+      "proxy_name": "隧道名稱",
+      "proxy_type": "隧道類型",
+      "client_id": "客戶端ID",
+      "server_id": "服務端ID",
+      "status": "狀態",
+      "visit_preview": "訪問預覽"
+    },
+    "stats": {
+      "label": "隧道名稱",
+      "tunnel_traffic": "隧道：{{name}}"
+    }
+  },
+  "server": {
+    "configuration": "服務器配置",
+    "warning": {
+      "title": "警告⚠️：修改配置文件後服務器將退出",
+      "dockerHint": "如果您使用 docker 容器且啟動命令中包含 --restart=unless-stopped 或 --restart=always，則無需擔心。",
+      "systemdHint": "如果您使用 systemd 安裝，則無需擔心。"
+    },
+    "selectHint": "選擇一個服務器來管理 Frps 服務",
+    "advancedMode": {
+      "title": "高級模式",
+      "description": "編輯服務器原始配置文件"
+    },
+    "serverLabel": "服務器",
+    "frpsUrl": {
+      "title": "FRP 服務器覆蓋地址 - 可選",
+      "description": "客戶端可以使用該地址連接，而不是使用默認的IP。在端口轉發/CDN/反向代理時很有用。格式：[tcp/kcp/websocket]://127.0.0.1:7000"
+    },
+    "operation": {
+      "update_failed": "修改失敗",
+      "update_success": "修改成功",
+      "update_title": "修改服務端狀態"
+    },
+    "editor": {
+      "comment": "節點 {{id}} 的備注",
+      "comment_placeholder": "備注",
+      "config_title": "節點 {{id}} 配置文件`frps.json`內容",
+      "config_description": "只需要配置端口和IP等字段，認證信息會由系統補全",
+      "config_placeholder": "配置文件內容"
+    },
+    "form": {
+      "comment_title": "節點 {{id}} 的備注",
+      "comment_hint": "可以到高級模式修改備注哦！",
+      "comment_empty": "空空如也",
+      "public_host": "公網地址",
+      "bind_port": "FRPs 監聽端口",
+      "bind_addr": "FRPs 監聽地址",
+      "proxy_bind_addr": "代理監聽地址",
+      "vhost_http_port": "HTTP 監聽端口",
+      "subdomain_host": "域名後綴",
+      "quic_bind_port": "Quic 監聽端口",
+      "kcp_bind_port": "KCP 監聽端口"
+    },
+    "create": {
+      "submitting": "正在創建服務端...",
+      "error": "創建服務端失敗",
+      "success": "創建服務端成功",
+      "button": "新建",
+      "title": "新建服務端",
+      "description": "創建新的服務端用於提供服務，服務端ID必須唯一",
+      "id": "服務端ID",
+      "ip": "IP地址/域名",
+      "submit": "創建"
+    },
+    "id": "ID (點擊查看安裝命令)",
+    "status": "配置狀態",
+    "status_configured": "已配置",
+    "status_unconfigured": "未配置",
+    "info": "運行信息/版本",
+    "ip": "IP地址",
+    "secret": "密鑰 (點擊查看啟動命令)",
+    "install": {
+      "title": "安裝命令",
+      "description": "請選擇您的操作系統並覆制相應的安裝命令",
+      "windows": "Windows",
+      "linux": "Linux"
+    },
+    "start": {
+      "title": "啟動命令",
+      "description": "覆制並運行以下命令來啟動 frp-panel 服務端"
+    },
+    "delete": {
+      "success": "刪除成功",
+      "failed": "刪除失敗",
+      "title": "確定刪除該服務器?",
+      "description": "此操作無法撤消。您確定要永久從我們的服務器中刪除該服務器?",
+      "warning": "刪除後運行中的服務器將無法通過現有參數再次連接，如果您需要刪除服務器對外的連接，可以選擇暫停服務器",
+      "confirm": "確定"
+    },
+    "actions_menu": {
+      "open_menu": "打開菜單",
+      "title": "服務器操作",
+      "copy_success": "覆制成功，如果覆制不成功，請點擊ID字段手動覆制",
+      "copy_failed": "獲取平台信息失敗，如果覆制不成功，請點擊ID字段手動覆制",
+      "copy_command": "覆制啟動命令",
+      "edit_config": "修改配置",
+      "download_failed": "獲取平台信息失敗",
+      "download_config": "下載配置",
+      "realtime_log": "實時日志",
+      "remote_terminal": "遠程終端",
+      "delete": "刪除"
+    },
+    "status_online": "在線",
+    "status_offline": "離線",
+    "status_error": "錯誤",
+    "status_unknown": "未知",
+    "status_pause": "已暫停"
+  },
+  "auth": {
+    "loggingIn": "登錄中，請稍候",
+    "loginSuccess": "登錄成功，正在跳轉到首頁",
+    "loginFailed": "登錄失敗，請重試",
+    "usernamePlaceholder": "用戶名",
+    "password": "密碼",
+    "passwordPlaceholder": "••••••••",
+    "error": "錯誤",
+    "registering": "注冊中，請稍候",
+    "registerSuccess": "注冊成功，正在跳轉到登錄頁",
+    "registerFailed": "注冊失敗，請重試",
+    "emailPlaceholder": "郵箱地址",
+    "loginTitle": "登錄",
+    "inputCredentials": "請輸入您的賬號信息",
+    "noAccount": "還沒有賬號？",
+    "register": "注冊",
+    "registerTitle": "注冊",
+    "haveAccount": "已有賬號？",
+    "login": "登錄"
+  },
+  "settings": {
+    "header": {
+      "title": "平台設定",
+      "description": "修改前端平台設定",
+      "note": "此配置僅保存在本地"
+    },
+    "toast": {
+      "updateSuccess": "已更新平台設定"
+    },
+    "loading": {
+      "platform": "正在載入平台設定"
+    },
+    "form": {
+      "useServerGithubLabel": "使用伺服器 GitHub 代理",
+      "useServerGithubDescription": "若開啟，將使用後台配置的代理地址下載",
+      "githubProxyLabel": "自訂 GitHub 代理地址",
+      "githubProxyPlaceholder": "例如 https://ghproxy.com/",
+      "clientApiLabel": "自訂 API URL",
+      "clientApiPlaceholder": "例如 https://api.example.com/",
+      "clientRpcLabel": "自訂 RPC URL",
+      "clientRpcPlaceholder": "例如 https://rpc.example.com/"
+    },
+    "actions": {
+      "saveChanges": "儲存變更"
+    },
+    "dialog": {
+      "confirmSaveTitle": "確認儲存",
+      "confirmSaveDescription": "確定要儲存變更嗎？",
+      "cancel": "取消",
+      "confirm": "確認"
+    }
+  },
+  "platform": {
+    "configuredServers": "已配置服務端數",
+    "unit": "個",
+    "menuHint": "請前往左側🫲菜單修改",
+    "configuredClients": "已配置客戶端數",
+    "unconfiguredServers": "未配置服務端數",
+    "unconfiguredClients": "未配置客戶端數",
+    "totalServers": "服務端總數",
+    "totalClients": "客戶端總數"
+  },
+  "refresh": {
+    "data": "刷新數據"
+  },
+  "team": {
+    "title": "租戶"
+  },
+  "userInfo": {
+    "profileUpdated": "用戶信息已更新",
+    "updateFailed": "更新用戶信息失敗",
+    "loading": "正在加載用戶信息",
+    "yourProfile": "您的用戶信息",
+    "manageAccountDetails": "管理賬戶詳情",
+    "userID": "用戶ID",
+    "tenantID": "租戶ID",
+    "name": "姓名",
+    "placeholderName": "請輸入姓名",
+    "email": "郵箱",
+    "placeholderEmail": "請輸入郵箱",
+    "role": "角色",
+    "roleDescription": "管理員(admin)或普通用戶(normal)",
+    "changePassword": "修改密碼",
+    "newPassword": "新密碼",
+    "placeholderNewPassword": "請輸入新密碼",
+    "confirmPassword": "確認新密碼",
+    "placeholderConfirmNewPassword": "請再次輸入新密碼",
+    "saveChanges": "保存更改",
+    "confirmSaveTitle": "確認保存",
+    "confirmSaveDescription": "您確定要保存更改嗎？",
+    "cancel": "取消",
+    "confirm": "確認"
+  },
+  "worker": {
+    "client_install_workerd": {
+      "success": "Workerd安裝成功",
+      "error": "Workerd安裝失敗",
+      "title": "安裝Workerd",
+      "description": "從URL安裝Workerd二進制文件到客戶端",
+      "download_url": "Workerd二進制文件下載URL",
+      "placeholder": "請輸入下載URL",
+      "button": "安裝"
+    },
+    "status_running": "運行中",
+    "status_stopped": "已停止",
+    "status_error": "錯誤",
+    "status_unknown": "未知",
+    "deploy": {
+      "title": "部署",
+      "add_client": "添加部署",
+      "select_client": "選擇客戶端",
+      "client_description": "請選擇Worker需要部署到的客戶端",
+      "no_clients": "沒有可用的客戶端"
+    },
+    "edit": {
+      "save_success": "保存成功",
+      "save_error": "保存失敗",
+      "title": "編輯",
+      "info_tab": "信息",
+      "code_tab": "代碼",
+      "template_tab": "模板"
+    },
+    "info": {
+      "basic_info": "基本信息",
+      "info_description": "這里是基本信息，你可以修改Worker的相關描述",
+      "worker_id": "WorkerID",
+      "worker_name": "Worker名稱",
+      "name_placeholder": "請輸入Worker名稱",
+      "resources": "相關資源",
+      "clients": "部署",
+      "ingresses": "入口"
+    },
+    "ingress": {
+      "create_success": "創建成功",
+      "create_failed": "創建失敗",
+      "client_required": "客戶端是必需的",
+      "server_required": "服務器是必需的",
+      "select_client": "選擇客戶端",
+      "select_server": "選擇服務器",
+      "creating": "正在創建",
+      "create_submit": "創建",
+      "title": "入口",
+      "create": "創建",
+      "create_title": "創建入口",
+      "create_description": "創建一個新的入口",
+      "no_ingress": "沒有入口",
+      "edit": "編輯",
+      "delete": {
+        "title": "刪除入口",
+        "description": "您確定要刪除此入口嗎？",
+        "button": "刪除"
+      },
+      "delete_success": "入口已成功刪除",
+      "delete_description": "入口已成功刪除"
+    },
+    "create": {
+      "success": "創建成功",
+      "error": "創建失敗",
+      "button": "創建",
+      "title": "創建Worker",
+      "description": "創建一個新的Worker",
+      "clientIdLabel": "客戶端ID",
+      "nameLabel": "Worker名稱",
+      "namePlaceholder": "請輸入Worker名稱",
+      "creating": "正在創建",
+      "submit": "提交"
+    },
+    "columns": {
+      "name": "Worker名稱",
+      "status": "狀態",
+      "id": "WorkerID"
+    },
+    "actions_menu": {
+      "delete": "刪除",
+      "redeploy_worker": "重啟",
+      "title": "操作",
+      "edit": "編輯"
+    },
+    "delete": {
+      "title": "刪除Worker",
+      "description": "確定要刪除這個Worker嗎？",
+      "confirm": "確認刪除"
+    },
+    "status": {
+      "no_resources": "無資源",
+      "unusable": "不可用",
+      "unhealthy": "不健康",
+      "healthy": "健康",
+      "degraded": "降級",
+      "clients": "部署",
+      "ingresses": "入口",
+      "running": "運行中"
+    },
+    "status_text": "狀態"
+  },
+  "status": {
+    "new": "新建",
+    "wait_start": "等待啟動",
+    "start_error": "啟動錯誤",
+    "running": "運行中",
+    "check_failed": "檢查失敗",
+    "error": "錯誤",
+    "unknown": "未知"
+  },
+  "nav": {
+    "clients": "客戶端",
+    "servers": "服務端",
+    "editTunnel": "編輯隧道",
+    "editClient": "編輯客戶端",
+    "editServer": "編輯服務端",
+    "trafficStats": "流量統計",
+    "realTimeLog": "實時日志",
+    "console": "控制台",
+    "workers": "函數"
+  },
+  "frpc_form": {
+    "add": "新增隧道",
+    "name": "名稱",
+    "protocol": "協議",
+    "type": "類型",
+    "confirm": "確定",
+    "config": "隧道配置",
+    "expand": "點擊展開{{count}}條隧道",
+    "tunnel_name": "隧道名稱",
+    "delete": "刪除",
+    "type_label": "類型:「{{type}}」",
+    "access_method": "訪問方式",
+    "local_port": "本地端口",
+    "remote_port": "遠程端口",
+    "local_ip": "本地IP",
+    "subdomain": "子域名",
+    "secret_key": "密鑰",
+    "save": "保存",
+    "save_success": "保存成功",
+    "save_error": "保存失敗"
+  }
+}
