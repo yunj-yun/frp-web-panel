@@ -3,7 +3,9 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGE_REPOSITORY="${FRP_WEB_PANEL_IMAGE_REPOSITORY:-ghcr.io/yunj-yun/frp-web-panel}"
-TAG=""
+SOURCE_COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD 2>/dev/null || printf 'unknown')"
+TAG="local-$(git -C "$ROOT_DIR" rev-parse --short=12 HEAD 2>/dev/null || printf 'unknown')"
+AUTO_TAG="true"
 PLATFORMS=""
 OUTPUT="load"
 
@@ -13,16 +15,17 @@ Build the unified FRP Web Panel image used by Master, Server, and Client.
 For deployment, build and load locally; pushing is an optional publishing step.
 
 Usage:
-  scripts/build-image.sh --tag <tag> [--platform <platforms>] [--load|--push]
+  scripts/build-image.sh [options]
 
 Options:
-  --tag <tag>          Docker tag and application version (required)
+  --tag <tag>          Override the default local-<commit> image tag
   --platform <list>    Buildx platform list, e.g. linux/amd64,linux/arm64
   --load               Load a single-platform image into the local Docker engine (default)
   --push               Push to a registry for optional publishing (not needed for deployment)
   -h, --help           Show this help
 
 Examples:
+  scripts/build-image.sh
   scripts/build-image.sh --tag v1.2.3 --load
   scripts/build-image.sh --tag v1.2.3 --platform linux/amd64,linux/arm64 --push
 
@@ -35,6 +38,7 @@ while (($#)); do
     --tag)
       [[ $# -ge 2 ]] || { echo "Missing value for --tag" >&2; exit 2; }
       TAG="$2"
+      AUTO_TAG="false"
       shift 2
       ;;
     --platform)
@@ -62,8 +66,13 @@ while (($#)); do
   esac
 done
 
+if [[ "$AUTO_TAG" == "true" ]] && [[ -n "$(git -C "$ROOT_DIR" status --porcelain 2>/dev/null)" ]]; then
+  echo "The source tree has uncommitted changes. Commit them or pass an explicit --tag." >&2
+  exit 2
+fi
+
 if [[ ! "$TAG" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
-  echo "Pass a valid Docker tag with --tag (for example: v1.2.3)." >&2
+  echo "Pass a valid Docker tag (for example: v1.2.3)." >&2
   exit 2
 fi
 
@@ -71,6 +80,12 @@ if [[ "$OUTPUT" == "load" && "$PLATFORMS" == *,* ]]; then
   echo "--load supports one platform; use --push for a multi-platform image." >&2
   exit 2
 fi
+
+command -v git >/dev/null 2>&1 || { echo "Git is required to identify the source commit." >&2; exit 1; }
+git -C "$ROOT_DIR" rev-parse --verify HEAD >/dev/null 2>&1 || {
+  echo "Run this script from a Git checkout of the project." >&2
+  exit 1
+}
 
 command -v docker >/dev/null 2>&1 || { echo "Docker is required." >&2; exit 1; }
 docker buildx version >/dev/null 2>&1 || { echo "Docker Buildx is required." >&2; exit 1; }
@@ -100,5 +115,6 @@ fi
 
 BUILD_ARGS+=("$ROOT_DIR")
 printf 'Building %s (%s)\n' "$IMAGE" "${PLATFORMS:-native platform}"
+printf 'Source commit: %s\n' "$SOURCE_COMMIT"
 "${BUILD_ARGS[@]}"
 printf 'Image ready: %s\n' "$IMAGE"

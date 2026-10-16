@@ -5,7 +5,9 @@ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_SOURCE="$ROOT_DIR/deploy/master/docker-compose.yml"
 DEPLOY_DIR="${FRP_PANEL_DEPLOY_DIR:-/opt/frp-panel}"
 TAG=""
-BUILD_IMAGE="false"
+AUTO_TAG="true"
+BUILD_IMAGE="true"
+IMAGE_REPOSITORY="${FRP_WEB_PANEL_IMAGE_REPOSITORY:-ghcr.io/yunj-yun/frp-web-panel}"
 API_HOST="${FRP_PANEL_API_HOST:-${FRP_PANEL_DOMAIN:-}}"
 RPC_HOST="${FRP_PANEL_RPC_HOST:-}"
 CLIENT_API_URL="${FRP_PANEL_CLIENT_API_URL:-}"
@@ -32,12 +34,14 @@ usage() {
 Initialize or update the FRP Web Panel Master Docker Compose deployment.
 
 Usage:
-  sudo scripts/deploy-master.sh [options]
+  sudo scripts/deploy-master.sh
 
 Options:
   --dir <path>             Deployment directory (default: /opt/frp-panel)
-  --tag <tag>              Image tag from scripts/build-image.sh (default: latest)
-  --build                  Build and load this tag locally before deploying (requires --tag)
+  --tag <tag>              Override the default local-<commit> image tag
+  --no-build               Use an existing image; requires --tag <tag>
+  --build                  Build and load the image locally (default; kept as an explicit alias)
+  --skip-pull              Skip pulling when the selected image is already loaded locally
   --domain <domain>        Optional domain for the Master API and RPC
   --api-host <host>        Public IP or domain for the Master API (default: auto-detected IP)
   --rpc-host <host>        Public host used for Master RPC (default: API host)
@@ -45,7 +49,6 @@ Options:
   --client-rpc-url <url>   URL nodes use for RPC (default: grpc://<rpc-host>:<rpc-port>)
   --web-port <port>        Host port published for the web UI (default: 9000)
   --rpc-port <port>        Host port published for RPC (default: 9001)
-  --skip-pull              Use an image already loaded into the local Docker engine
   -h, --help               Show this help
 
 For a reverse proxy, pass its externally reachable URLs, for example:
@@ -67,7 +70,7 @@ while (($#)); do
       value="$2"
       case "$key" in
         --dir) DEPLOY_DIR="$value" ;;
-        --tag) TAG="$value" ;;
+        --tag) TAG="$value"; AUTO_TAG="false" ;;
         --domain|--api-host) API_HOST="$value"; API_HOST_SET="true" ;;
         --rpc-host) RPC_HOST="$value"; RPC_HOST_SET="true" ;;
         --client-api-url) CLIENT_API_URL="$value"; CLIENT_API_URL_SET="true" ;;
@@ -85,6 +88,10 @@ while (($#)); do
       BUILD_IMAGE="true"
       shift
       ;;
+    --no-build)
+      BUILD_IMAGE="false"
+      shift
+      ;;
     -h|--help)
       usage
       exit 0
@@ -100,13 +107,25 @@ done
 command -v docker >/dev/null 2>&1 || { echo "Docker is required." >&2; exit 1; }
 docker compose version >/dev/null 2>&1 || { echo "Docker Compose v2 is required (docker compose)." >&2; exit 1; }
 command -v openssl >/dev/null 2>&1 || { echo "OpenSSL is required to generate the Master secret." >&2; exit 1; }
+command -v git >/dev/null 2>&1 || { echo "Git is required to identify the source commit." >&2; exit 1; }
 
-if [[ -n "$TAG" && ! "$TAG" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+SOURCE_COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD 2>/dev/null)" || {
+  echo "Run this script from a Git checkout of the project." >&2
+  exit 1
+}
+if [[ -n "$(git -C "$ROOT_DIR" status --porcelain 2>/dev/null)" ]]; then
+  echo "The source tree has uncommitted changes. Commit them before deploying." >&2
+  exit 2
+fi
+if [[ -z "$TAG" ]]; then
+  TAG="local-${SOURCE_COMMIT:0:12}"
+fi
+if [[ ! "$TAG" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
   echo "Invalid Docker tag: $TAG" >&2
   exit 2
 fi
-if [[ "$BUILD_IMAGE" == "true" && -z "$TAG" ]]; then
-  echo "--build requires an explicit --tag." >&2
+if [[ "$BUILD_IMAGE" == "false" && "$AUTO_TAG" == "true" ]]; then
+  echo "--no-build requires --tag <tag>." >&2
   exit 2
 fi
 
@@ -291,11 +310,7 @@ case "$CLIENT_RPC_URL" in
   *) echo "--client-rpc-url must start with grpc://, ws://, or wss://." >&2; exit 2 ;;
 esac
 
-IMAGE="$(read_env_value FRP_PANEL_IMAGE)"
-if [[ -n "$TAG" ]]; then
-  IMAGE="${FRP_WEB_PANEL_IMAGE_REPOSITORY:-ghcr.io/yunj-yun/frp-web-panel}:$TAG"
-fi
-IMAGE="${IMAGE:-${FRP_WEB_PANEL_IMAGE_REPOSITORY:-ghcr.io/yunj-yun/frp-web-panel}:latest}"
+IMAGE="$IMAGE_REPOSITORY:$TAG"
 
 if [[ ! -f "$ENV_FILE" ]]; then
   APP_GLOBAL_SECRET="$(openssl rand -hex 32)"
@@ -370,6 +385,24 @@ if [[ "$healthy" != "true" ]]; then
 fi
 
 printf 'Master is healthy. Data directory: %s/data\n' "$DEPLOY_DIR"
+printf 'Source commit: %s\n' "$SOURCE_COMMIT"
+printf 'Image tag: %s\n' "$TAG"
+printf 'Node source checkout and build commands:\n'
+printf 'cd "$HOME"\n'
+printf 'if [ -d frp-web-panel/.git ]; then git -C frp-web-panel fetch origin main; else git clone --branch main https://github.com/yunj-yun/frp-web-panel.git; fi\n'
+printf 'git -C frp-web-panel checkout %s\n' "$SOURCE_COMMIT"
+printf 'cd frp-web-panel\n'
+if [[ "$IMAGE_REPOSITORY" != "ghcr.io/yunj-yun/frp-web-panel" ]]; then
+  if [[ "$AUTO_TAG" == "true" ]]; then
+    printf 'sudo env FRP_WEB_PANEL_IMAGE_REPOSITORY=%q ./scripts/build-image.sh\n' "$IMAGE_REPOSITORY"
+  else
+    printf 'sudo env FRP_WEB_PANEL_IMAGE_REPOSITORY=%q ./scripts/build-image.sh --tag %q\n' "$IMAGE_REPOSITORY" "$TAG"
+  fi
+elif [[ "$AUTO_TAG" == "true" ]]; then
+  printf 'sudo ./scripts/build-image.sh\n'
+else
+  printf 'sudo ./scripts/build-image.sh --tag %q\n' "$TAG"
+fi
 printf 'Master host: %s\n' "$API_HOST"
 printf 'Web UI: %s\n' "$(sed -n 's/^CLIENT_API_URL=//p' "$ENV_FILE" | head -n 1)"
 printf 'Node RPC URL: %s\n' "$(sed -n 's/^CLIENT_RPC_URL=//p' "$ENV_FILE" | head -n 1)"
