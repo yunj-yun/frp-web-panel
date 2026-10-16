@@ -116,21 +116,28 @@ gzip -dc frp-web-panel-v1.2.3.tar.gz | docker load
 
 ### 部署 Master
 
-使用已发布镜像：
+默认使用本机默认路由对应的 IPv4 地址，无需先准备域名：
 
 ```bash
-sudo ./scripts/deploy-master.sh \
-  --tag v1.2.3 \
-  --api-host panel.example.com \
-  --rpc-host panel.example.com
+sudo ./scripts/deploy-master.sh --tag v1.2.3
 ```
 
-脚本会：
+该 IP 会用于 Web/API、RPC 和新节点的默认连接地址，需要能被浏览器及 Server/Client 节点访问。局域网部署时通常会探测到局域网 IP。有域名时可选传 `--domain`（等价于 `--api-host`），例如：
+
+```bash
+sudo ./scripts/deploy-master.sh --tag v1.2.3 --domain panel.example.com
+```
+
+也可以通过 `sudo env FRP_PANEL_DOMAIN=panel.example.com ./scripts/deploy-master.sh` 传入域名。DNS 解析和 HTTPS 反向代理需另行配置；如 API 与 RPC 使用不同主机，增加 `--rpc-host`。反向代理场景使用 `--client-api-url` 和 `--client-rpc-url` 指定节点可访问的 HTTPS/WSS 地址。
+
+部署脚本会：
 
 1. 创建 `/opt/frp-panel`（可用 `--dir` 修改）和 `data/` 数据目录。
 2. 生成随机 `APP_GLOBAL_SECRET`，写入权限为 `600` 的 `.env`。
-3. 写入 Master Compose，拉取镜像并启动容器。
-4. 等待 `/login` 健康检查通过后输出 Web UI 地址。
+3. 写入并校验 Master Compose，拉取镜像并启动容器。
+4. 等待 `/login` 健康检查通过后输出 Web UI 地址和节点连接地址。
+
+重复运行时会保留已有密钥和未指定的设置；显式传入的域名、端口或节点 URL 会更新 `.env` 并重建容器，因此可以先按 IP 部署，再切换到域名。原先由脚本生成的直连 HTTP/gRPC 地址会随 IP、域名和端口更新；自定义的反向代理 URL 会保留，除非再次显式传入新的 URL。
 
 首次打开 Web UI 后注册的第一个用户会成为管理员。Compose 默认发布：
 
@@ -142,7 +149,6 @@ sudo ./scripts/deploy-master.sh \
 ```bash
 sudo ./scripts/deploy-master.sh \
   --tag v1.2.3 \
-  --api-host 192.168.1.10 \
   --skip-pull
 ```
 
@@ -151,8 +157,7 @@ sudo ./scripts/deploy-master.sh \
 ```bash
 sudo ./scripts/deploy-master.sh \
   --build \
-  --tag v1.2.3 \
-  --api-host 192.168.1.10
+  --tag v1.2.3
 ```
 
 反向代理或 CDN 场景下，使用 `--client-api-url` 和 `--client-rpc-url` 指定节点真正访问的 URL，例如 `https://panel.example.com` 和 `wss://panel.example.com`。备份 Master 时应同时备份 `.env` 和 `data/`，其中包含 SQLite 数据库和应用状态。

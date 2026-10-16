@@ -27,22 +27,36 @@ gzip -dc frp-web-panel-v1.2.3.tar.gz | docker load
 
 ## 部署 Master
 
+默认部署不要求域名。脚本会从默认路由对应的网卡读取 IPv4 地址，作为 Master API、RPC 和新节点 Compose 的连接地址；若系统没有 `ip` 命令或路由地址，则尝试读取主机的非回环 IPv4。该地址需要能被浏览器和 Server/Client 节点访问。直接部署到局域网时会使用局域网 IP。
+
+最简部署：
+
 ```bash
-sudo ./scripts/deploy-master.sh \
-  --tag v1.2.3 \
-  --api-host panel.example.com \
-  --rpc-host panel.example.com
+sudo ./scripts/deploy-master.sh --tag v1.2.3
 ```
 
-部署脚本需要 Docker、Docker Compose v2 和 OpenSSL；使用 `--build` 时还需要 Docker Buildx。脚本会创建 `/opt/frp-panel`、SQLite 数据目录和权限为 `600` 的 `.env`，生成随机的 `APP_GLOBAL_SECRET`，拉取镜像、启动 Compose 并等待健康检查。首次打开 Web UI 后注册的第一个用户为管理员；脚本不会生成或打印管理员密码。备份时请一并备份 `.env` 和 `data/`。
+有域名时，可用 `--domain`（或 `--api-host`）设置 Master API/RPC 使用的主机名：
+
+```bash
+sudo ./scripts/deploy-master.sh --tag v1.2.3 --domain panel.example.com
+```
+
+等价地，也可通过 `sudo env FRP_PANEL_DOMAIN=panel.example.com ./scripts/deploy-master.sh` 传入域名。DNS 解析和 TLS 反向代理需另行配置。使用独立 API/RPC 域名时，可再传 `--rpc-host`；节点连接 URL 需要反向代理/CDN 时，使用 `--client-api-url` 和 `--client-rpc-url` 指定。
+
+部署脚本需要 Docker、Docker Compose v2 和 OpenSSL；使用 `--build` 时还需要 Docker Buildx。脚本会创建 `/opt/frp-panel`（可通过 `--dir` 修改）、SQLite 数据目录和权限为 `600` 的 `.env`，生成随机的 `APP_GLOBAL_SECRET`，校验 Compose 配置，拉取镜像、启动容器并等待健康检查。首次打开 Web UI 后注册的第一个用户为管理员；脚本不会生成或打印管理员密码。备份时请一并备份 `.env` 和 `data/`。
+
+重复运行部署脚本会保留现有密钥和未指定的配置；显式传入的域名、端口或节点连接 URL 会更新 `.env` 并重建容器。例如首次按 IP 部署后，可切换到域名：
+
+```bash
+sudo ./scripts/deploy-master.sh --domain panel.example.com
+```
+
+脚本生成的直连 HTTP/gRPC 地址会随 IP、域名和端口更新；自定义的反向代理 URL 会保留，除非再次显式传入新的 URL。
 
 如果在同一台机器上使用刚通过 `--load` 构建的本地镜像，可加 `--skip-pull`：
 
 ```bash
-sudo ./scripts/deploy-master.sh \
-  --tag v1.2.3 \
-  --api-host 192.168.1.10 \
-  --skip-pull
+sudo ./scripts/deploy-master.sh --tag v1.2.3 --skip-pull
 ```
 
 也可以由 Master 部署脚本完成本地构建和启动：
@@ -50,11 +64,10 @@ sudo ./scripts/deploy-master.sh \
 ```bash
 sudo ./scripts/deploy-master.sh \
   --build \
-  --tag v1.2.3 \
-  --api-host 192.168.1.10
+  --tag v1.2.3
 ```
 
-默认节点连接地址为 `http://<api-host>:9000` 和 `grpc://<rpc-host>:9001`。使用反向代理时，通过 `--client-api-url` 和 `--client-rpc-url` 指定节点实际可访问的 HTTPS/WSS 地址，并确保代理正确转发 API 和 RPC/WebSocket 流量。开放防火墙端口时，按实际网络路径开放 Web/API 与 RPC 端口。
+默认节点连接地址为 `http://<自动探测的 IP 或指定域名>:9000` 和 `grpc://<RPC 主机>:9001`。开放防火墙端口时，按实际网络路径开放 Web/API 与 RPC 端口。
 
 ## 部署 Server 和 Client
 

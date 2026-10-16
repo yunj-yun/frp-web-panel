@@ -6,26 +6,40 @@ COMPOSE_SOURCE="$ROOT_DIR/deploy/master/docker-compose.yml"
 DEPLOY_DIR="${FRP_PANEL_DEPLOY_DIR:-/opt/frp-panel}"
 TAG=""
 BUILD_IMAGE="false"
-API_HOST=""
-RPC_HOST=""
-CLIENT_API_URL=""
-CLIENT_RPC_URL=""
-WEB_PORT="9000"
-RPC_PORT="9001"
+API_HOST="${FRP_PANEL_API_HOST:-${FRP_PANEL_DOMAIN:-}}"
+RPC_HOST="${FRP_PANEL_RPC_HOST:-}"
+CLIENT_API_URL="${FRP_PANEL_CLIENT_API_URL:-}"
+CLIENT_RPC_URL="${FRP_PANEL_CLIENT_RPC_URL:-}"
+WEB_PORT="${FRP_PANEL_WEB_PORT:-9000}"
+RPC_PORT="${FRP_PANEL_RPC_PORT:-9001}"
 SKIP_PULL="false"
+API_HOST_SET="false"
+RPC_HOST_SET="false"
+CLIENT_API_URL_SET="false"
+CLIENT_RPC_URL_SET="false"
+WEB_PORT_SET="false"
+RPC_PORT_SET="false"
+
+[[ -n "$API_HOST" ]] && API_HOST_SET="true"
+[[ -n "$RPC_HOST" ]] && RPC_HOST_SET="true"
+[[ -n "$CLIENT_API_URL" ]] && CLIENT_API_URL_SET="true"
+[[ -n "$CLIENT_RPC_URL" ]] && CLIENT_RPC_URL_SET="true"
+[[ -n "${FRP_PANEL_WEB_PORT:-}" ]] && WEB_PORT_SET="true"
+[[ -n "${FRP_PANEL_RPC_PORT:-}" ]] && RPC_PORT_SET="true"
 
 usage() {
   cat <<'EOF'
-Initialize or update the FRP-Panel Master Docker Compose deployment.
+Initialize or update the FRP Web Panel Master Docker Compose deployment.
 
 Usage:
-  sudo scripts/deploy-master.sh --api-host <domain-or-ip> [options]
+  sudo scripts/deploy-master.sh [options]
 
 Options:
   --dir <path>             Deployment directory (default: /opt/frp-panel)
   --tag <tag>              Image tag from scripts/build-image.sh (default: latest)
   --build                  Build and load this tag locally before deploying (requires --tag)
-  --api-host <host>        Public host used for the Master API and first Server
+  --domain <domain>        Optional domain for the Master API and RPC
+  --api-host <host>        Public IP or domain for the Master API (default: auto-detected IP)
   --rpc-host <host>        Public host used for Master RPC (default: API host)
   --client-api-url <url>   URL nodes use for the API (default: http://<api-host>:<web-port>)
   --client-rpc-url <url>   URL nodes use for RPC (default: grpc://<rpc-host>:<rpc-port>)
@@ -37,24 +51,29 @@ Options:
 For a reverse proxy, pass its externally reachable URLs, for example:
   --client-api-url https://panel.example.com
   --client-rpc-url wss://panel.example.com
+
+Environment overrides (useful for non-interactive deployment):
+  FRP_PANEL_DOMAIN=panel.example.com
+  FRP_PANEL_API_HOST=192.0.2.10
+  FRP_PANEL_RPC_HOST=panel.example.com
 EOF
 }
 
 while (($#)); do
   case "$1" in
-    --dir|--tag|--api-host|--rpc-host|--client-api-url|--client-rpc-url|--web-port|--rpc-port)
+    --dir|--tag|--domain|--api-host|--rpc-host|--client-api-url|--client-rpc-url|--web-port|--rpc-port)
       [[ $# -ge 2 ]] || { echo "Missing value for $1" >&2; exit 2; }
       key="$1"
       value="$2"
       case "$key" in
         --dir) DEPLOY_DIR="$value" ;;
         --tag) TAG="$value" ;;
-        --api-host) API_HOST="$value" ;;
-        --rpc-host) RPC_HOST="$value" ;;
-        --client-api-url) CLIENT_API_URL="$value" ;;
-        --client-rpc-url) CLIENT_RPC_URL="$value" ;;
-        --web-port) WEB_PORT="$value" ;;
-        --rpc-port) RPC_PORT="$value" ;;
+        --domain|--api-host) API_HOST="$value"; API_HOST_SET="true" ;;
+        --rpc-host) RPC_HOST="$value"; RPC_HOST_SET="true" ;;
+        --client-api-url) CLIENT_API_URL="$value"; CLIENT_API_URL_SET="true" ;;
+        --client-rpc-url) CLIENT_RPC_URL="$value"; CLIENT_RPC_URL_SET="true" ;;
+        --web-port) WEB_PORT="$value"; WEB_PORT_SET="true" ;;
+        --rpc-port) RPC_PORT="$value"; RPC_PORT_SET="true" ;;
       esac
       shift 2
       ;;
@@ -100,8 +119,93 @@ validate_port() {
   fi
 }
 
-validate_port "--web-port" "$WEB_PORT"
-validate_port "--rpc-port" "$RPC_PORT"
+validate_host() {
+  local name="$1"
+  local host="$2"
+  local value="$2"
+  local octet
+  local -a octets labels
+
+  if [[ -z "$host" || "$host" == *://* || "$host" == */* || "$host" == *[[:space:]]* ]]; then
+    echo "$name must be a hostname or IP without scheme, port, or path." >&2
+    exit 2
+  fi
+
+  if [[ "$host" == \[*\] ]]; then
+    value="${host:1:${#host}-2}"
+  fi
+  if [[ "$value" == *:* ]]; then
+    if [[ ! "$value" =~ ^[A-Fa-f0-9:.%]+$ ]]; then
+      echo "$name must be a valid IPv6 address without a port." >&2
+      exit 2
+    fi
+    return
+  fi
+
+  if [[ "$value" =~ ^[0-9]+(\.[0-9]+){3}$ ]]; then
+    IFS='.' read -r -a octets <<< "$value"
+    for octet in "${octets[@]}"; do
+      if ((10#$octet > 255)); then
+        echo "$name contains an invalid IPv4 address." >&2
+        exit 2
+      fi
+    done
+    return
+  fi
+
+  if (( ${#value} > 253 )) || [[ "$value" == .* || "$value" == *. || "$value" == *..* ]] || [[ ! "$value" =~ ^[A-Za-z0-9.-]+$ ]]; then
+    echo "$name must be a hostname or IP without scheme, port, or path." >&2
+    exit 2
+  fi
+  IFS='.' read -r -a labels <<< "$value"
+  for label in "${labels[@]}"; do
+    if (( ${#label} > 63 )) || [[ ! "$label" =~ ^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?$ ]]; then
+      echo "$name contains an invalid hostname label." >&2
+      exit 2
+    fi
+  done
+}
+
+detect_default_host() {
+  local detected=""
+  if command -v ip >/dev/null 2>&1; then
+    detected="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i <= NF; i++) if ($i == "src" && i < NF) {print $(i + 1); exit}}')"
+  fi
+  if [[ -z "$detected" ]] && command -v hostname >/dev/null 2>&1; then
+    detected="$(hostname -I 2>/dev/null | tr ' ' '\n' | awk '$1 ~ /^[0-9]+\./ && $1 !~ /^127\./ && $1 !~ /^169\.254\./ {print; exit}')"
+  fi
+  printf '%s' "$detected"
+}
+
+read_env_value() {
+  local key="$1"
+  [[ -f "$ENV_FILE" ]] || return 0
+  awk -v key="$key" 'index($0, key "=") == 1 {sub(/^[^=]*=/, "", $0); print; exit}' "$ENV_FILE"
+}
+
+format_url_host() {
+  local host="$1"
+  if [[ "$host" == *:* && "$host" != \[*\] ]]; then
+    printf '[%s]' "$host"
+  else
+    printf '%s' "$host"
+  fi
+}
+
+set_env_value() {
+  local key="$1"
+  local value="$2"
+  local env_tmp
+  env_tmp="$(mktemp "$ENV_FILE.XXXXXX")"
+  awk -v key="$key" -v value="$value" '
+    BEGIN { updated = 0 }
+    index($0, key "=") == 1 { print key "=" value; updated = 1; next }
+    { print }
+    END { if (!updated) print key "=" value }
+  ' "$ENV_FILE" > "$env_tmp"
+  chmod 600 "$env_tmp"
+  mv "$env_tmp" "$ENV_FILE"
+}
 
 mkdir -p "$DEPLOY_DIR/data"
 DEPLOY_DIR="$(cd -- "$DEPLOY_DIR" && pwd)"
@@ -110,43 +214,90 @@ COMPOSE_FILE="$DEPLOY_DIR/docker-compose.yml"
 chmod 700 "$DEPLOY_DIR" "$DEPLOY_DIR/data"
 cp "$COMPOSE_SOURCE" "$COMPOSE_FILE"
 
-if [[ ! -f "$ENV_FILE" ]]; then
-  if [[ -z "$API_HOST" && -t 0 ]]; then
-    read -r -p "Master public host (domain or IP): " API_HOST
-  fi
+OLD_API_HOST=""
+OLD_RPC_HOST=""
+OLD_CLIENT_API_URL=""
+OLD_CLIENT_RPC_URL=""
+OLD_WEB_PORT=""
+OLD_RPC_PORT=""
+if [[ -f "$ENV_FILE" ]]; then
+  OLD_API_HOST="$(read_env_value MASTER_API_HOST)"
+  OLD_RPC_HOST="$(read_env_value MASTER_RPC_HOST)"
+  OLD_CLIENT_API_URL="$(read_env_value CLIENT_API_URL)"
+  OLD_CLIENT_RPC_URL="$(read_env_value CLIENT_RPC_URL)"
+  OLD_WEB_PORT="$(read_env_value MASTER_WEB_PORT)"
+  OLD_RPC_PORT="$(read_env_value MASTER_RPC_PORT)"
+  [[ "$API_HOST_SET" == "true" ]] || API_HOST="$OLD_API_HOST"
+  [[ "$RPC_HOST_SET" == "true" ]] || RPC_HOST="$OLD_RPC_HOST"
+  [[ "$CLIENT_API_URL_SET" == "true" ]] || CLIENT_API_URL="$OLD_CLIENT_API_URL"
+  [[ "$CLIENT_RPC_URL_SET" == "true" ]] || CLIENT_RPC_URL="$OLD_CLIENT_RPC_URL"
+  [[ "$WEB_PORT_SET" == "true" ]] || WEB_PORT="$OLD_WEB_PORT"
+  [[ "$RPC_PORT_SET" == "true" ]] || RPC_PORT="$OLD_RPC_PORT"
+fi
+
+WEB_PORT="${WEB_PORT:-9000}"
+RPC_PORT="${RPC_PORT:-9001}"
+if [[ -z "$API_HOST" ]]; then
+  API_HOST="$(detect_default_host)"
   if [[ -z "$API_HOST" ]]; then
-    echo "Set --api-host when initializing a new deployment." >&2
+    echo "Cannot detect a local IP address. Set --domain/--api-host or FRP_PANEL_DOMAIN/FRP_PANEL_API_HOST." >&2
     exit 2
   fi
-  if [[ "$API_HOST" == *://* || "$API_HOST" == */* || "$API_HOST" == *[[:space:]]* ]]; then
-    echo "--api-host must be a hostname or IP without scheme, port, or path." >&2
-    exit 2
+  echo "Using detected Master host: $API_HOST"
+fi
+if [[ "$RPC_HOST_SET" != "true" ]]; then
+  if [[ -n "$OLD_RPC_HOST" && -n "$OLD_API_HOST" && "$OLD_RPC_HOST" != "$OLD_API_HOST" ]]; then
+    RPC_HOST="$OLD_RPC_HOST"
+  else
+    RPC_HOST="$API_HOST"
   fi
+fi
+RPC_HOST="${RPC_HOST:-$API_HOST}"
+validate_host "--api-host" "$API_HOST"
+validate_host "--rpc-host" "$RPC_HOST"
+validate_port "--web-port" "$WEB_PORT"
+validate_port "--rpc-port" "$RPC_PORT"
 
-  RPC_HOST="${RPC_HOST:-$API_HOST}"
-  if [[ "$RPC_HOST" == *://* || "$RPC_HOST" == */* || "$RPC_HOST" == *[[:space:]]* ]]; then
-    echo "--rpc-host must be a hostname or IP without scheme, port, or path." >&2
-    exit 2
+API_URL_HOST="$(format_url_host "$API_HOST")"
+RPC_URL_HOST="$(format_url_host "$RPC_HOST")"
+DEFAULT_CLIENT_API_URL="http://${API_URL_HOST}:${WEB_PORT}"
+DEFAULT_CLIENT_RPC_URL="grpc://${RPC_URL_HOST}:${RPC_PORT}"
+
+if [[ "$CLIENT_API_URL_SET" != "true" ]]; then
+  OLD_DEFAULT_CLIENT_API_URL=""
+  if [[ -n "$OLD_API_HOST" && -n "$OLD_WEB_PORT" ]]; then
+    OLD_DEFAULT_CLIENT_API_URL="http://$(format_url_host "$OLD_API_HOST"):${OLD_WEB_PORT}"
   fi
+  if [[ -z "$CLIENT_API_URL" || "$CLIENT_API_URL" == "$OLD_DEFAULT_CLIENT_API_URL" ]]; then
+    CLIENT_API_URL="$DEFAULT_CLIENT_API_URL"
+  fi
+fi
+if [[ "$CLIENT_RPC_URL_SET" != "true" ]]; then
+  OLD_DEFAULT_CLIENT_RPC_URL=""
+  if [[ -n "$OLD_RPC_HOST" && -n "$OLD_RPC_PORT" ]]; then
+    OLD_DEFAULT_CLIENT_RPC_URL="grpc://$(format_url_host "$OLD_RPC_HOST"):${OLD_RPC_PORT}"
+  fi
+  if [[ -z "$CLIENT_RPC_URL" || "$CLIENT_RPC_URL" == "$OLD_DEFAULT_CLIENT_RPC_URL" ]]; then
+    CLIENT_RPC_URL="$DEFAULT_CLIENT_RPC_URL"
+  fi
+fi
+case "$CLIENT_API_URL" in
+  http://*) API_SCHEME="http" ;;
+  https://*) API_SCHEME="https" ;;
+  *) echo "--client-api-url must start with http:// or https://." >&2; exit 2 ;;
+esac
+case "$CLIENT_RPC_URL" in
+  grpc://*|ws://*|wss://*) ;;
+  *) echo "--client-rpc-url must start with grpc://, ws://, or wss://." >&2; exit 2 ;;
+esac
 
-  API_URL_HOST="$API_HOST"
-  RPC_URL_HOST="$RPC_HOST"
-  if [[ "$API_HOST" == *:* && "$API_HOST" != \[*\] ]]; then API_URL_HOST="[$API_HOST]"; fi
-  if [[ "$RPC_HOST" == *:* && "$RPC_HOST" != \[*\] ]]; then RPC_URL_HOST="[$RPC_HOST]"; fi
+IMAGE="$(read_env_value FRP_PANEL_IMAGE)"
+if [[ -n "$TAG" ]]; then
+  IMAGE="${FRP_WEB_PANEL_IMAGE_REPOSITORY:-ghcr.io/yunj-yun/frp-web-panel}:$TAG"
+fi
+IMAGE="${IMAGE:-${FRP_WEB_PANEL_IMAGE_REPOSITORY:-ghcr.io/yunj-yun/frp-web-panel}:latest}"
 
-  CLIENT_API_URL="${CLIENT_API_URL:-http://${API_URL_HOST}:${WEB_PORT}}"
-  CLIENT_RPC_URL="${CLIENT_RPC_URL:-grpc://${RPC_URL_HOST}:${RPC_PORT}}"
-  case "$CLIENT_API_URL" in
-    http://*) API_SCHEME="http" ;;
-    https://*) API_SCHEME="https" ;;
-    *) echo "--client-api-url must start with http:// or https://." >&2; exit 2 ;;
-  esac
-  case "$CLIENT_RPC_URL" in
-    grpc://*|ws://*|wss://*) ;;
-    *) echo "--client-rpc-url must start with grpc://, ws://, or wss://." >&2; exit 2 ;;
-  esac
-
-  IMAGE="${FRP_WEB_PANEL_IMAGE_REPOSITORY:-ghcr.io/yunj-yun/frp-web-panel}:${TAG:-latest}"
+if [[ ! -f "$ENV_FILE" ]]; then
   APP_GLOBAL_SECRET="$(openssl rand -hex 32)"
   umask 077
   {
@@ -162,22 +313,31 @@ if [[ ! -f "$ENV_FILE" ]]; then
     printf 'CLIENT_API_URL=%s\n' "$CLIENT_API_URL"
     printf 'CLIENT_RPC_URL=%s\n' "$CLIENT_RPC_URL"
   } > "$ENV_FILE"
-  chmod 600 "$ENV_FILE"
-  unset APP_GLOBAL_SECRET
 else
   chmod 600 "$ENV_FILE"
+  if [[ -z "$(read_env_value APP_GLOBAL_SECRET)" ]]; then
+    set_env_value APP_GLOBAL_SECRET "$(openssl rand -hex 32)"
+  fi
+  set_env_value FRP_PANEL_IMAGE "$IMAGE"
+  set_env_value MASTER_WEB_PORT "$WEB_PORT"
+  set_env_value MASTER_RPC_PORT "$RPC_PORT"
+  set_env_value MASTER_API_HOST "$API_HOST"
+  set_env_value MASTER_RPC_HOST "$RPC_HOST"
+  set_env_value MASTER_API_SCHEME "$API_SCHEME"
+  set_env_value CLIENT_API_URL "$CLIENT_API_URL"
+  set_env_value CLIENT_RPC_URL "$CLIENT_RPC_URL"
 fi
+chmod 600 "$ENV_FILE"
+unset APP_GLOBAL_SECRET
 
 cd "$DEPLOY_DIR"
-if [[ -n "$TAG" ]]; then
-  export FRP_PANEL_IMAGE="${FRP_WEB_PANEL_IMAGE_REPOSITORY:-ghcr.io/yunj-yun/frp-web-panel}:${TAG}"
-fi
 
 if [[ "$BUILD_IMAGE" == "true" ]]; then
   "$ROOT_DIR/scripts/build-image.sh" --tag "$TAG" --load
   SKIP_PULL="true"
 fi
 
+docker compose -f "$COMPOSE_FILE" config --quiet
 if [[ "$SKIP_PULL" != "true" ]]; then
   docker compose -f "$COMPOSE_FILE" pull master
 fi
@@ -209,14 +369,8 @@ if [[ "$healthy" != "true" ]]; then
   exit 1
 fi
 
-if [[ -n "$TAG" ]]; then
-  env_tmp="$(mktemp "$DEPLOY_DIR/.env.XXXXXX")"
-  sed '/^FRP_PANEL_IMAGE=/d' "$ENV_FILE" > "$env_tmp"
-  printf 'FRP_PANEL_IMAGE=%s:%s\n' "${FRP_WEB_PANEL_IMAGE_REPOSITORY:-ghcr.io/yunj-yun/frp-web-panel}" "$TAG" >> "$env_tmp"
-  chmod 600 "$env_tmp"
-  mv "$env_tmp" "$ENV_FILE"
-fi
-
 printf 'Master is healthy. Data directory: %s/data\n' "$DEPLOY_DIR"
+printf 'Master host: %s\n' "$API_HOST"
 printf 'Web UI: %s\n' "$(sed -n 's/^CLIENT_API_URL=//p' "$ENV_FILE" | head -n 1)"
+printf 'Node RPC URL: %s\n' "$(sed -n 's/^CLIENT_RPC_URL=//p' "$ENV_FILE" | head -n 1)"
 printf 'First registered user becomes the administrator. The generated secret remains in %s (mode 600).\n' "$ENV_FILE"
