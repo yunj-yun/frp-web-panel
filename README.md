@@ -80,7 +80,8 @@ https://app.example.com:443
 
 - Linux Docker Engine。
 - Docker Compose v2，即 `docker compose` 命令。
-- 构建镜像时需要 Docker Buildx；多架构发布还需要 QEMU。
+- Git 和 OpenSSL；部署 Master 的脚本使用 OpenSSL 生成密钥。
+- 本地构建需要 Docker Buildx；只有发布多架构镜像时才需要 QEMU。
 - Server/Client 节点建议使用 Linux Docker Engine，因为它们依赖 host 网络。
 
 Master、Server、Client 使用同一个镜像，通过 `master`、`server` 或 `client` 启动参数选择角色。默认镜像地址为：
@@ -89,43 +90,44 @@ Master、Server、Client 使用同一个镜像，通过 `master`、`server` 或 
 ghcr.io/yunj-yun/frp-web-panel
 ```
 
-### 构建镜像
-
-加载到当前 Docker 主机：
+部署脚本位于本仓库。下面从 `main` 拉取源码，并记录 Master 实际使用的 commit 和本地镜像 tag。Server/Client 必须构建同一个 commit 和 tag，才能与 Master 生成的 Compose 一致；该流程不依赖 GitHub Release 或已发布的应用镜像：
 
 ```bash
-./scripts/build-image.sh --tag v1.2.3 --load
+git clone --branch main https://github.com/yunj-yun/frp-web-panel.git
+cd frp-web-panel
+SOURCE_COMMIT="$(git rev-parse HEAD)"
+VERSION="local-$(git rev-parse --short=12 HEAD)"
+printf 'SOURCE_COMMIT=%s\nVERSION=%s\n' "$SOURCE_COMMIT" "$VERSION"
 ```
 
-构建并推送 `linux/amd64` 和 `linux/arm64`：
+源码构建需要联网下载 Dockerfile 使用的基础镜像、Go 模块和 npm 依赖；这些是构建依赖下载，不会上传本项目镜像。
+
+### 本地构建镜像
+
+Server/Client 节点使用此命令在本机构建并加载镜像：
 
 ```bash
-docker login ghcr.io -u yunj-yun
-./scripts/build-image.sh \
-  --tag v1.2.3 \
-  --platform linux/amd64,linux/arm64 \
-  --push
+./scripts/build-image.sh --tag "$VERSION" --load
 ```
 
-脚本支持通过 `FRP_WEB_PANEL_IMAGE_REPOSITORY` 覆盖镜像地址。`--load` 只支持单一平台；需要让离线节点导入时，可以导出镜像：
+`--load` 将当前架构镜像保存到本机 Docker。镜像使用 `ghcr.io/yunj-yun/frp-web-panel:<tag>` 作为本地名称；这只是标签，不会上传到 GHCR，也不需要 `docker login` 或 `docker push`。
 
-```bash
-docker save ghcr.io/yunj-yun/frp-web-panel:v1.2.3 | gzip > frp-web-panel-v1.2.3.tar.gz
-gzip -dc frp-web-panel-v1.2.3.tar.gz | docker load
-```
+`--load` 只支持单平台构建。当前流程在每台 Master/节点主机分别本地构建，不需要多架构推送或镜像归档。
 
 ### 部署 Master
 
 默认使用本机默认路由对应的 IPv4 地址，无需先准备域名：
 
 ```bash
-sudo ./scripts/deploy-master.sh --tag v1.2.3
+sudo ./scripts/deploy-master.sh --build --tag "$VERSION"
 ```
+
+部署脚本会在 Master 主机本地构建并加载镜像，再启动容器；不会推送项目镜像。
 
 该 IP 会用于 Web/API、RPC 和新节点的默认连接地址，需要能被浏览器及 Server/Client 节点访问。局域网部署时通常会探测到局域网 IP。有域名时可选传 `--domain`（等价于 `--api-host`），例如：
 
 ```bash
-sudo ./scripts/deploy-master.sh --tag v1.2.3 --domain panel.example.com
+sudo ./scripts/deploy-master.sh --build --tag "$VERSION" --domain panel.example.com
 ```
 
 也可以通过 `sudo env FRP_PANEL_DOMAIN=panel.example.com ./scripts/deploy-master.sh` 传入域名。DNS 解析和 HTTPS 反向代理需另行配置；如 API 与 RPC 使用不同主机，增加 `--rpc-host`。反向代理场景使用 `--client-api-url` 和 `--client-rpc-url` 指定节点可访问的 HTTPS/WSS 地址。
@@ -134,7 +136,7 @@ sudo ./scripts/deploy-master.sh --tag v1.2.3 --domain panel.example.com
 
 1. 创建 `/opt/frp-panel`（可用 `--dir` 修改）和 `data/` 数据目录。
 2. 生成随机 `APP_GLOBAL_SECRET`，写入权限为 `600` 的 `.env`。
-3. 写入并校验 Master Compose，拉取镜像并启动容器。
+3. 本地构建并加载镜像，写入并校验 Master Compose，然后启动容器。
 4. 等待 `/login` 健康检查通过后输出 Web UI 地址和节点连接地址。
 
 重复运行时会保留已有密钥和未指定的设置；显式传入的域名、端口或节点 URL 会更新 `.env` 并重建容器，因此可以先按 IP 部署，再切换到域名。原先由脚本生成的直连 HTTP/gRPC 地址会随 IP、域名和端口更新；自定义的反向代理 URL 会保留，除非再次显式传入新的 URL。
@@ -144,20 +146,12 @@ sudo ./scripts/deploy-master.sh --tag v1.2.3 --domain panel.example.com
 - `9000/tcp`：Web/API。
 - `9001/tcp`：RPC，供节点连接。
 
-如果镜像已经加载到本机：
+按脚本输出的 `Web UI` 地址打开页面并注册首个管理员。可用以下命令确认 Master 容器和日志：
 
 ```bash
-sudo ./scripts/deploy-master.sh \
-  --tag v1.2.3 \
-  --skip-pull
-```
-
-也可以由部署脚本先构建镜像再启动：
-
-```bash
-sudo ./scripts/deploy-master.sh \
-  --build \
-  --tag v1.2.3
+cd /opt/frp-panel
+sudo docker compose ps
+sudo docker compose logs --tail=100 master
 ```
 
 反向代理或 CDN 场景下，使用 `--client-api-url` 和 `--client-rpc-url` 指定节点真正访问的 URL，例如 `https://panel.example.com` 和 `wss://panel.example.com`。备份 Master 时应同时备份 `.env` 和 `data/`，其中包含 SQLite 数据库和应用状态。
@@ -166,14 +160,67 @@ sudo ./scripts/deploy-master.sh \
 
 1. 登录 Master，在 Server 或 Client 页面创建节点。
 2. 打开节点详情页，复制或下载生成的 `docker-compose.yml`。
-3. 将文件放入目标 Linux 主机目录。
-4. 在该目录执行：
-
-   ```bash
-   docker compose up -d
-   ```
+3. 按下方流程在每台节点主机本地构建镜像，将 Compose 保存到节点自己的目录并启动。
 
 生成的 Compose 已包含节点 ID、连接凭据、Master API/RPC 地址和当前镜像 tag。Server Compose 还包含 Caddy，并将 `./caddy`、`./caddy/data` 和 `./caddy/config` 持久化到当前目录。请保留整个目录，不要删除 Caddy 数据，否则会丢失已签发证书和续期状态。
+
+下面给出在 Server/Client 主机本地构建并使用 Master Compose 启动的完整步骤。
+
+#### 保存 Compose 并启动
+
+在目标节点创建独立目录，将 Master 节点详情页复制或下载的内容保存为 `docker-compose.yml`。其中含有节点 ID 和密钥，请限制文件权限：
+
+```bash
+NODE_DIR="$HOME/frp-server" # Client 节点改为 "$HOME/frp-client"
+mkdir -p "$NODE_DIR"
+cd "$NODE_DIR"
+umask 077
+nano docker-compose.yml
+chmod 600 docker-compose.yml
+docker compose config --quiet
+```
+
+#### 在节点主机本地构建
+
+在每台 Server/Client 主机检出 Master 输出的同一个 `SOURCE_COMMIT`，并使用相同的 `VERSION` 构建镜像：
+
+```bash
+SOURCE_COMMIT="paste-the-commit-hash-printed-by-master"
+VERSION="local-${SOURCE_COMMIT:0:12}"
+cd "$HOME" # 源码目录与节点 Compose/Caddy 数据目录分开
+git clone --branch main https://github.com/yunj-yun/frp-web-panel.git
+cd frp-web-panel
+git fetch origin main
+git checkout "$SOURCE_COMMIT"
+./scripts/build-image.sh --tag "$VERSION" --load
+docker image inspect "ghcr.io/yunj-yun/frp-web-panel:${VERSION}" --format '{{.Id}}'
+```
+
+确认 Compose 中 `image:` 的 tag 与 `VERSION` 一致，回到节点 Compose 目录并强制只用本地镜像启动：
+
+```bash
+cd "$NODE_DIR"
+docker compose up -d
+```
+
+生成的应用服务设置了 `pull_policy: never`，只会使用当前主机本地构建的镜像，不会尝试从 GHCR 拉取。Server Compose 中的官方 `caddy:2-alpine` 运行依赖在本机缺少时仍会由 Compose 从 Docker Hub 拉取；这不是本项目应用镜像。`--load` 仅加载单平台应用镜像，不会登录或推送到 GHCR；ARM 主机应本机构建对应架构镜像。
+
+Server Compose 还会启动 Caddy，并在节点目录保存 `./caddy`、`./caddy/data` 和 `./caddy/config`；HTTPS Gateway 需要宿主机 80/443 端口可用。请保留这些数据目录。运行 `docker compose ps` 和 `docker compose logs --tail=100 -f` 检查节点，再回 Master 确认节点在线、版本和心跳正常。常见问题是 Master 地址不可达、9000/9001 被防火墙拦截，或本地镜像与 Compose tag 不匹配。
+
+### 升级
+
+在 Master 源码目录更新到新的 `main` commit，并构建升级 Master：
+
+```bash
+git fetch origin main
+git checkout origin/main
+SOURCE_COMMIT="$(git rev-parse HEAD)"
+VERSION="local-$(git rev-parse --short=12 HEAD)"
+printf 'SOURCE_COMMIT=%s\nVERSION=%s\n' "$SOURCE_COMMIT" "$VERSION"
+sudo ./scripts/deploy-master.sh --build --tag "$VERSION"
+```
+
+记录新输出的 `SOURCE_COMMIT` 和 `VERSION`，在每台节点检出该 commit 并本地构建同 tag 镜像。然后在 Master 为节点重新生成 Compose，替换节点目录里的旧文件，并运行 `docker compose up -d`。应用服务会固定使用本地镜像；Server 的 Caddy 镜像仍按需拉取。升级前备份 `/opt/frp-panel/.env` 和 `/opt/frp-panel/data/`，保留 Master 中的节点记录和节点数据目录。更多部署脚本参数见[Docker 部署教程](./deploy/README_zh.md)。
 
 节点上线后，Master 会显示心跳、版本、延迟、端口快照和运行状态。节点凭据属于敏感信息，不应提交到代码仓库或公开粘贴。
 
@@ -236,7 +283,7 @@ cd ..
 ./build.sh --skip-frontend
 ```
 
-打 `v*` 标签会触发 `.github/workflows/release.yml`：构建前端和 Go 发布文件，创建 GitHub Release，并向 GHCR 发布 `linux/amd64` 和 `linux/arm64` 镜像。提交前可执行静态检查：
+推送 `v*` Git 标签可选触发 `.github/workflows/release.yml`，创建 GitHub Release 并发布 `linux/amd64` 和 `linux/arm64` 多架构 GHCR 镜像。此发布流程与部署无关：本文按源码本地构建并使用应用镜像，不要求 GHCR、Docker Hub、`docker login` 或 `docker push`。QEMU 仅用于可选的多架构镜像发布。提交前可执行静态检查：
 
 ```bash
 git diff --check

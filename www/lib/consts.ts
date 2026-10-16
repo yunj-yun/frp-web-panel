@@ -198,7 +198,7 @@ export const DockerComposeFile = (
   ].map((argument) => argument.replace(/\$/g, '$$$$'))
   const serviceName = type === 'client' ? 'frp-panel-client' : 'frp-panel-server'
   const imageTag = info.imageTag || 'latest'
-  const compose = `services:\n  ${serviceName}:\n    image: ghcr.io/yunj-yun/frp-web-panel:${imageTag}\n    container_name: ${serviceName}\n    network_mode: host\n    restart: unless-stopped\n    command: ${JSON.stringify(command)}`
+  const compose = `services:\n  ${serviceName}:\n    image: ghcr.io/yunj-yun/frp-web-panel:${imageTag}\n    pull_policy: never\n    container_name: ${serviceName}\n    network_mode: host\n    restart: unless-stopped\n    command: ${JSON.stringify(command)}`
 
   // Caddy shares the Server host network so it can own the public HTTP/HTTPS
   // listeners directly. The config and storage directories are persisted next

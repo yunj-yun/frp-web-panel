@@ -10,6 +10,7 @@ OUTPUT="load"
 usage() {
   cat <<'EOF'
 Build the unified FRP Web Panel image used by Master, Server, and Client.
+For deployment, build and load locally; pushing is an optional publishing step.
 
 Usage:
   scripts/build-image.sh --tag <tag> [--platform <platforms>] [--load|--push]
@@ -18,7 +19,7 @@ Options:
   --tag <tag>          Docker tag and application version (required)
   --platform <list>    Buildx platform list, e.g. linux/amd64,linux/arm64
   --load               Load a single-platform image into the local Docker engine (default)
-  --push               Push the image to the configured image repository
+  --push               Push to a registry for optional publishing (not needed for deployment)
   -h, --help           Show this help
 
 Examples:
