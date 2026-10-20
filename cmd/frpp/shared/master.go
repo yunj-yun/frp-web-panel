@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/gin-gonic/gin"
+	"github.com/sourcegraph/conc"
 	"github.com/yunj-yun/frp-web-panel/biz/master/auth"
 	"github.com/yunj-yun/frp-web-panel/biz/master/certificate"
 	"github.com/yunj-yun/frp-web-panel/biz/master/proxy"
@@ -15,8 +17,6 @@ import (
 	"github.com/yunj-yun/frp-web-panel/services/watcher"
 	"github.com/yunj-yun/frp-web-panel/utils/logger"
 	"github.com/yunj-yun/frp-web-panel/utils/wsgrpc"
-	"github.com/gin-gonic/gin"
-	"github.com/sourcegraph/conc"
 	"go.uber.org/fx"
 )
 
@@ -54,7 +54,6 @@ func runMaster(param runMasterParam) {
 	// the authenticated control stream.
 	param.TaskManager.AddDurationTask(30*time.Second, certificate.ProcessQueuedJobs, param.AppInstance)
 	param.TaskManager.AddDurationTask(60*time.Second, certificate.RefreshCertificateStatuses, param.AppInstance)
-	defer param.TaskManager.Stop()
 
 	logger.Logger(param.Ctx).Infof("start to run master")
 	var wg conc.WaitGroup
