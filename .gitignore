@@ -16,6 +16,8 @@ dist/
 /src/node/shared.ts
 *.log
 *.tgz
+*.tar.gz
+*.bundle
 .DS_Store
 .idea
 .temp
