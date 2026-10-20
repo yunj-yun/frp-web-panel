@@ -7,7 +7,7 @@ DEPLOY_DIR="${FRP_PANEL_DEPLOY_DIR:-/opt/frp-panel}"
 TAG=""
 AUTO_TAG="true"
 BUILD_IMAGE="true"
-IMAGE_REPOSITORY="${FRP_WEB_PANEL_IMAGE_REPOSITORY:-ghcr.io/yunj-yun/frp-web-panel}"
+IMAGE_REPOSITORY="${FRP_WEB_PANEL_IMAGE_REPOSITORY:-lujuya/frp-web-panel}"
 API_HOST="${FRP_PANEL_API_HOST:-${FRP_PANEL_DOMAIN:-}}"
 RPC_HOST="${FRP_PANEL_RPC_HOST:-}"
 CLIENT_API_URL="${FRP_PANEL_CLIENT_API_URL:-}"
@@ -392,7 +392,7 @@ printf 'cd "$HOME"\n'
 printf 'if [ -d frp-web-panel/.git ]; then git -C frp-web-panel fetch origin main; else git clone --branch main https://github.com/yunj-yun/frp-web-panel.git; fi\n'
 printf 'git -C frp-web-panel checkout %s\n' "$SOURCE_COMMIT"
 printf 'cd frp-web-panel\n'
-if [[ "$IMAGE_REPOSITORY" != "ghcr.io/yunj-yun/frp-web-panel" ]]; then
+if [[ "$IMAGE_REPOSITORY" != "lujuya/frp-web-panel" ]]; then
   if [[ "$AUTO_TAG" == "true" ]]; then
     printf 'sudo env FRP_WEB_PANEL_IMAGE_REPOSITORY=%q ./scripts/build-image.sh\n' "$IMAGE_REPOSITORY"
   else

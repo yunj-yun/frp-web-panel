@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-IMAGE_REPOSITORY="${FRP_WEB_PANEL_IMAGE_REPOSITORY:-ghcr.io/yunj-yun/frp-web-panel}"
+IMAGE_REPOSITORY="${FRP_WEB_PANEL_IMAGE_REPOSITORY:-lujuya/frp-web-panel}"
 SOURCE_COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD 2>/dev/null || printf 'unknown')"
 TAG="local-$(git -C "$ROOT_DIR" rev-parse --short=12 HEAD 2>/dev/null || printf 'unknown')"
 AUTO_TAG="true"
@@ -29,7 +29,7 @@ Examples:
   scripts/build-image.sh --tag v1.2.3 --load
   scripts/build-image.sh --tag v1.2.3 --platform linux/amd64,linux/arm64 --push
 
-Override the default ghcr.io/yunj-yun/frp-web-panel with FRP_WEB_PANEL_IMAGE_REPOSITORY.
+Override the default lujuya/frp-web-panel with FRP_WEB_PANEL_IMAGE_REPOSITORY.
 EOF
 }
 

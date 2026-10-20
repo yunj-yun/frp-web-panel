@@ -87,10 +87,10 @@ https://app.example.com:443
 Master、Server、Client 使用同一个镜像，通过 `master`、`server` 或 `client` 启动参数选择角色。默认镜像地址为：
 
 ```text
-ghcr.io/yunj-yun/frp-web-panel
+lujuya/frp-web-panel
 ```
 
-首次部署时，在 Master 主机复制执行以下命令即可。Master 和各节点都在本机从源码构建应用镜像，不需要发布或拉取项目镜像。部署成功后记下输出的 `Source commit`，之后按 Master 输出的节点命令在各节点构建相同版本：
+首次部署时，在 Master 主机复制执行以下命令即可。默认部署会从 Docker Hub 拉取 `lujuya/frp-web-panel`；如果使用自定义镜像仓库，可通过 `FRP_WEB_PANEL_IMAGE_REPOSITORY` 覆盖。部署成功后记下输出的 `Source commit`，之后按 Master 输出的节点命令在各节点构建或拉取相同版本：
 
 ```bash
 git clone --branch main https://github.com/yunj-yun/frp-web-panel.git
@@ -108,7 +108,7 @@ Server/Client 节点使用此命令在本机构建并加载镜像：
 ./scripts/build-image.sh
 ```
 
-脚本默认按当前源码 commit 自动生成 `local-<commit>` tag，并将当前架构镜像加载到本机 Docker。镜像使用 `ghcr.io/yunj-yun/frp-web-panel:<tag>` 作为本地名称；这只是标签，不会上传到 GHCR，也不需要 `docker login` 或 `docker push`。
+脚本默认按当前源码 commit 自动生成 `local-<commit>` tag，并将当前架构镜像加载到本机 Docker。镜像使用 `lujuya/frp-web-panel:<tag>` 作为默认名称；需要发布到 Docker Hub 时，先登录对应账号，再使用 `--push` 推送。
 
 当前流程在每台 Master/节点主机分别本地构建，不需要多架构推送或镜像归档。首次源码构建需要联网下载 Docker 基础镜像、Go 模块和 npm 依赖。
 
@@ -122,7 +122,7 @@ Server/Client 节点使用此命令在本机构建并加载镜像：
 sudo ./scripts/deploy-master.sh
 ```
 
-部署脚本会按当前源码 commit 自动命名 tag，在 Master 主机本地构建并加载镜像，再启动容器；不会推送或拉取项目镜像。部署成功后会输出 `Source commit`、`Image tag` 和可复制的节点源码构建命令。
+部署脚本会按当前源码 commit 自动命名 tag，在 Master 主机本地构建并加载镜像，再启动容器；使用 `--no-build --tag <tag>` 时会从默认 Docker Hub 仓库拉取已有镜像。部署成功后会输出 `Source commit`、`Image tag` 和可复制的节点源码构建或拉取命令。
 
 该 IP 会用于 Web/API、RPC 和新节点的默认连接地址，需要能被浏览器及 Server/Client 节点访问。局域网部署时通常会探测到局域网 IP。有域名时可选传 `--domain`（等价于 `--api-host`），例如：
 
@@ -191,7 +191,7 @@ cd "$NODE_DIR"
 docker compose up -d
 ```
 
-生成的应用服务设置了 `pull_policy: never`，只会使用当前主机本地构建的镜像，不会尝试从 GHCR 拉取。Server Compose 中的官方 `caddy:2-alpine` 运行依赖在本机缺少时仍会由 Compose 从 Docker Hub 拉取；这不是本项目应用镜像。构建脚本默认只加载单平台应用镜像，不会登录或推送到 GHCR；ARM 主机应本机构建对应架构镜像。
+生成的应用服务使用 `lujuya/frp-web-panel:<tag>` 和 `pull_policy: always`，启动或执行 `docker compose pull` 时会从 Docker Hub 获取镜像。Server Compose 中的官方 `caddy:2-alpine` 运行依赖也会从 Docker Hub 拉取。使用固定 tag 可回滚版本；如改用本地构建镜像，可在 Compose 中替换 `image` 并改为 `pull_policy: never`。
 
 Server Compose 还会启动 Caddy，并在节点目录保存 `./caddy`、`./caddy/data` 和 `./caddy/config`；HTTPS Gateway 需要宿主机 80/443 端口可用。请保留这些数据目录。运行 `docker compose ps` 和 `docker compose logs --tail=100 -f` 检查节点，再回 Master 确认节点在线、版本和心跳正常。常见问题是 Master 地址不可达、9000/9001 被防火墙拦截，或本地镜像与 Compose tag 不匹配。
 
@@ -267,7 +267,7 @@ cd ..
 ./build.sh --skip-frontend
 ```
 
-推送 `v*` Git 标签可选触发 `.github/workflows/release.yml`，创建 GitHub Release 并发布 `linux/amd64` 和 `linux/arm64` 多架构 GHCR 镜像。此发布流程与部署无关：本文按源码本地构建并使用应用镜像，不要求 GHCR、Docker Hub、`docker login` 或 `docker push`。QEMU 仅用于可选的多架构镜像发布。提交前可执行静态检查：
+推送 `v*` Git 标签可选触发 `.github/workflows/release.yml`，创建 GitHub Release 并发布多架构 GHCR 镜像；日常部署使用 Docker Hub 上的 `lujuya/frp-web-panel`。手动发布 Docker Hub 镜像时，使用 `scripts/build-image.sh --tag <tag> --platform linux/amd64 --push`，并先执行 `docker login`。QEMU 仅用于可选的多架构镜像发布。提交前可执行静态检查：
 
 ```bash
 git diff --check

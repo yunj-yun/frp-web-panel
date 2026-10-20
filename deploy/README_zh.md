@@ -1,12 +1,12 @@
 # 本地构建部署教程
 
-本文按“不推送应用镜像到 Docker Hub 或 GHCR”的方式部署：克隆代码后，在 Master 主机本地构建并启动 Master；在每台 Server/Client 主机本地构建镜像，再将 Master 生成的 Compose 保存到各节点自己的目录启动。
+本文默认使用 Docker Hub 镜像部署：镜像发布者为 `lujuya`，仓库为 `lujuya/frp-web-panel`。Master、Server、Client 使用同一个镜像和 tag；也可以在每台主机本地构建后使用本地镜像。
 
-Master、Server、Client 使用同一个镜像和同一个版本 tag。脚本默认按当前源码 commit 自动生成 `local-<commit>` tag。Master 部署完成后记下输出的 `Source commit`；各节点检出同一个 commit 后，无参数构建就会得到相同 tag。`ghcr.io/yunj-yun/frp-web-panel:<tag>` 只是 Docker 本机镜像名称，不代表需要上传到 GHCR。
+脚本默认按当前源码 commit 自动生成 `local-<commit>` tag。使用 Docker Hub 时，先推送 `lujuya/frp-web-panel:<tag>`，再在节点 Compose 中使用同一个 tag。Master 部署完成后记下输出的 `Source commit` 和 `Image tag`；各节点也可以检出同一个 commit 后本地构建相同 tag。
 
 ## 部署前准备
 
-所有主机安装 Linux Docker Engine 和 Docker Compose v2。Master 主机还需要 Git、OpenSSL 和 Docker Buildx；Server/Client 主机本地构建时需要 Git 和 Docker Buildx。源码构建会从网络下载 Dockerfile 中的基础镜像及 Go/npm 构建依赖，但不会将项目镜像推送到任何仓库。
+所有主机安装 Linux Docker Engine 和 Docker Compose v2。使用 Docker Hub 私有仓库时，在需要拉取的主机执行 `docker login`；公开仓库无需登录。需要本地构建时，Master 和 Server/Client 主机还需要 Git、OpenSSL 和 Docker Buildx。
 
 浏览器需要能访问 Master Web/API；Server 和 Client 需要能访问 Master API 与 RPC。默认端口为 `9000/tcp`（Web/API）和 `9001/tcp`（RPC），按实际网络路径在主机防火墙、云安全组和路由器中放行。Server/Client 使用 Linux host 网络模式。
 
@@ -74,7 +74,7 @@ docker compose ps
 docker compose logs --tail=100 -f
 ```
 
-Master 生成的应用服务带有 `pull_policy: never`，Compose 只使用本地构建的应用镜像，不会尝试从 GHCR 拉取。Server Compose 中的官方 `caddy:2-alpine` 运行依赖在本机缺少时仍会从 Docker Hub 拉取；这不是本项目应用镜像。部署目录和源码目录应分开：Server 的 Caddy 会在 Compose 当前目录创建并持久化 `./caddy`、`./caddy/data` 和 `./caddy/config`。启用 HTTPS Gateway 前，确认宿主机 80/443 端口可用；请保留 Caddy 数据目录，否则会丢失证书和续期状态。
+Master 生成的应用服务使用 `lujuya/frp-web-panel:<tag>` 和 `pull_policy: always`，执行 `docker compose pull` 或 `docker compose up -d` 时会从 Docker Hub 获取应用镜像。Server Compose 中的官方 `caddy:2-alpine` 也会从 Docker Hub 拉取。部署目录和源码目录应分开：Server 的 Caddy 会在 Compose 当前目录创建并持久化 `./caddy`、`./caddy/data` 和 `./caddy/config`。启用 HTTPS Gateway 前，确认宿主机 80/443 端口可用；请保留 Caddy 数据目录，否则会丢失证书和续期状态。
 
 回 Master 查看节点状态，确认 Server/Client 在线、版本和心跳正常。若节点未上线，检查 Compose 日志、Compose 中的 Master 地址、节点到 Master 的 `9000/9001` 连通性，以及镜像 tag 是否一致。
 
@@ -100,6 +100,6 @@ Master 脚本会打印新的节点源码构建命令。在每台 Server/Client �
 - `--dir <目录>`：修改 Master 部署目录，默认 `/opt/frp-panel`。
 - `--tag <标签>`：覆盖默认的 `local-<commit>` 镜像标签；Master 输出的节点构建命令会带上同一个标签。
 - `--no-build --tag <标签>`：不在 Master 本地构建，默认从镜像仓库拉取该标签。若镜像已提前加载到本机，可再加 `--skip-pull`；常规源码部署不需要这些参数。
-- `scripts/build-image.sh --platform <平台>`：构建指定架构；`--push` 是可选发布功能，不属于部署流程。
+- `scripts/build-image.sh --platform <平台>`：构建指定架构；发布 Docker Hub 时使用 `--push`，例如 `scripts/build-image.sh --tag local-<commit> --platform linux/amd64 --push`。
 
 完整选项和环境变量可分别通过 `scripts/deploy-master.sh --help` 与 `scripts/build-image.sh --help` 查看。

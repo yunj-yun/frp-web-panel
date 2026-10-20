@@ -87,10 +87,10 @@ An FRP `type=https` tunnel is different: TLS is normally passed through to the C
 Master, Server, and Client share one image and select their role through the startup argument. The default image is:
 
 ```text
-ghcr.io/yunj-yun/frp-web-panel
+lujuya/frp-web-panel
 ```
 
-For a first deployment, copy and run these commands on the Master host. The Master and each node build the application image locally from source, so the application image does not need to be published or pulled. After deployment, note the printed `Source commit`; use the node command printed by the Master to build the matching version on each node:
+For a first deployment, copy and run these commands on the Master host. The default deployment pulls `lujuya/frp-web-panel` from Docker Hub; set `FRP_WEB_PANEL_IMAGE_REPOSITORY` to use another registry. After deployment, note the printed `Source commit`; use the node command printed by the Master to build or pull the matching version on each node:
 
 ```bash
 git clone --branch main https://github.com/yunj-yun/frp-web-panel.git
@@ -108,7 +108,7 @@ Server/Client nodes use this command to build and load the image locally:
 ./scripts/build-image.sh
 ```
 
-The script derives a `local-<commit>` tag from the current source and loads the native architecture image into the local Docker engine. The image uses `ghcr.io/yunj-yun/frp-web-panel:<tag>` as its local name; this does not upload it to GHCR. This workflow does not require `docker login` or `docker push`.
+The script derives a `local-<commit>` tag from the current source and loads the native architecture image into the local Docker engine. The default image name is `lujuya/frp-web-panel:<tag>`; to publish it to Docker Hub, log in to the target account and use `--push`.
 
 Optional build arguments are listed by `scripts/build-image.sh --help`. `--tag <tag>` overrides the automatic tag, `--platform <platform>` selects an architecture, and `--push` is for optional publishing; normal deployment needs none of them.
 
@@ -189,7 +189,7 @@ cd "$NODE_DIR"
 docker compose up -d
 ```
 
-The generated application service has `pull_policy: never`, so Compose only uses the locally built application image and will not try to pull it from GHCR. If missing locally, the official `caddy:2-alpine` runtime dependency in a Server Compose is still pulled from Docker Hub; this is not the project application image. `--load` loads only the single-platform application image into the current host; it does not log in or push to a registry. ARM hosts should build their native architecture locally. The first source build still needs to download Docker base images, Go modules, and npm packages.
+The generated application service uses `lujuya/frp-web-panel:<tag>` with `pull_policy: always`, so startup and `docker compose pull` fetch the image from Docker Hub. The official `caddy:2-alpine` runtime dependency in a Server Compose is also pulled from Docker Hub. Use a fixed tag for rollback; for a local-only image, replace `image` and set `pull_policy: never`.
 
 A Server Compose also starts Caddy and stores `./caddy`, `./caddy/data`, and `./caddy/config` beside the Compose file. HTTPS Gateway use requires host ports 80/443 to be available. Keep these directories. Check the node with `docker compose ps` and `docker compose logs --tail=100 -f`, then confirm online state, version, and heartbeat in the Master. Common causes of a node staying offline include unreachable Master URLs, blocked ports 9000/9001, or an image tag that differs from the Compose file.
 
@@ -265,7 +265,7 @@ cd ..
 ./build.sh --skip-frontend
 ```
 
-Pushing a `v*` tag optionally starts `.github/workflows/release.yml`, which creates a GitHub Release and publishes multi-platform `linux/amd64` and `linux/arm64` images to GHCR. This publishing workflow is independent of deployment: the source-based deployment above builds and uses the application image locally, and does not require GHCR, Docker Hub, `docker login`, or `docker push`. QEMU is only needed by the optional multi-platform publishing workflow. Useful pre-commit checks are:
+Pushing a `v*` tag optionally starts `.github/workflows/release.yml`, which creates a GitHub Release and publishes multi-platform images to GHCR; normal deployment uses `lujuya/frp-web-panel` on Docker Hub. To publish a Docker Hub image manually, run `scripts/build-image.sh --tag <tag> --platform linux/amd64 --push` after `docker login`. QEMU is only needed by the optional multi-platform publishing workflow. Useful pre-commit checks are:
 
 ```bash
 git diff --check
