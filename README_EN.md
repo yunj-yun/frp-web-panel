@@ -90,7 +90,7 @@ Master, Server, and Client share one image and select their role through the sta
 lujuya/frp-web-panel
 ```
 
-For a first deployment, copy and run these commands on the Master host. The default deployment pulls `lujuya/frp-web-panel` from Docker Hub; set `FRP_WEB_PANEL_IMAGE_REPOSITORY` to use another registry. After deployment, note the printed `Source commit`; use the node command printed by the Master to build or pull the matching version on each node:
+For a first deployment, copy and run these commands on the Master host. The default deployment pulls `lujuya/frp-web-panel` from Docker Hub. After deployment, note the printed `Source commit`; use the node command printed by the Master to build or pull the matching version on each node. A custom registry also requires changing the `image` in generated node Compose files.
 
 ```bash
 git clone --branch main https://github.com/yunj-yun/frp-web-panel.git

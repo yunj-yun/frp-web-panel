@@ -90,7 +90,7 @@ Master、Server、Client 使用同一个镜像，通过 `master`、`server` 或 
 lujuya/frp-web-panel
 ```
 
-首次部署时，在 Master 主机复制执行以下命令即可。默认部署会从 Docker Hub 拉取 `lujuya/frp-web-panel`；如果使用自定义镜像仓库，可通过 `FRP_WEB_PANEL_IMAGE_REPOSITORY` 覆盖。部署成功后记下输出的 `Source commit`，之后按 Master 输出的节点命令在各节点构建或拉取相同版本：
+首次部署时，在 Master 主机复制执行以下命令即可。默认部署会从 Docker Hub 拉取 `lujuya/frp-web-panel`。部署成功后记下输出的 `Source commit`，之后按 Master 输出的节点命令在各节点构建或拉取相同版本；自定义镜像仓库需要同时修改生成的节点 Compose 中的 `image`。
 
 ```bash
 git clone --branch main https://github.com/yunj-yun/frp-web-panel.git
