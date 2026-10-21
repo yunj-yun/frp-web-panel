@@ -3,10 +3,10 @@ package dao
 import (
 	"fmt"
 
-	"github.com/yunj-yun/frp-web-panel/defs"
-	"github.com/yunj-yun/frp-web-panel/models"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
+	"github.com/yunj-yun/frp-web-panel/defs"
+	"github.com/yunj-yun/frp-web-panel/models"
 	"gorm.io/gorm"
 )
 
@@ -166,6 +166,17 @@ func (m *serverMutation) CreateServer(userInfo models.UserInfo, server *models.S
 	}
 	server.UserID = userInfo.GetUserID()
 	server.TenantID = userInfo.GetTenantID()
+	// Persist a default frps configuration alongside the node record. A Server
+	// without config content cannot be used to build a client config, because
+	// the client needs bindPort to reach frps, so tunnels created before the
+	// user visits the Server page used to fail. Seeding the defaults makes a
+	// fresh Server immediately usable; saving the Server page overwrites them.
+	if len(server.ConfigContent) == 0 {
+		if err := server.SetConfigContent(models.DefaultServerConfig()); err != nil {
+			return fmt.Errorf("seed default server configuration: %w", err)
+		}
+	}
+	seedConfig, _ := server.GetConfigContent()
 	c := &models.Server{
 		ServerEntity: server,
 	}
@@ -174,7 +185,7 @@ func (m *serverMutation) CreateServer(userInfo models.UserInfo, server *models.S
 		if err := tx.Create(c).Error; err != nil {
 			return err
 		}
-		return reconcileServerPortReservationsTx(tx, userInfo, server.ServerID, nil)
+		return reconcileServerPortReservationsTx(tx, userInfo, server.ServerID, seedConfig)
 	})
 }
 

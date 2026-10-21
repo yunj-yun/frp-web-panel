@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/yunj-yun/frp-web-panel/utils"
 	v1 "github.com/fatedier/frp/pkg/config/v1"
+	"github.com/yunj-yun/frp-web-panel/utils"
 	"gorm.io/gorm"
 )
 
@@ -58,4 +58,16 @@ func (s *ServerEntity) ConfigEqual(cfg *v1.ServerConfig) bool {
 	}
 
 	return utils.MD5(s.ConfigContent) == utils.MD5(raw)
+}
+
+// DefaultServerConfig returns the frps defaults used when a Server is created
+// or repaired. A Server without configuration cannot build a client config
+// because the client needs bindPort to reach frps, so both the create path and
+// the read path seed these defaults instead of leaving the record unusable.
+// frp's own Complete() supplies bindPort 7000 and the remaining values, keeping
+// the document consistent with what the Server page renders.
+func DefaultServerConfig() *v1.ServerConfig {
+	cfg := &v1.ServerConfig{}
+	_ = cfg.Complete()
+	return cfg
 }

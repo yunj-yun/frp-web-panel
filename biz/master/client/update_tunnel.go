@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"net/url"
 
+	v1 "github.com/fatedier/frp/pkg/config/v1"
+	"github.com/samber/lo"
+	"github.com/spf13/cast"
 	"github.com/yunj-yun/frp-web-panel/common"
 	"github.com/yunj-yun/frp-web-panel/defs"
 	"github.com/yunj-yun/frp-web-panel/models"
@@ -14,9 +17,6 @@ import (
 	"github.com/yunj-yun/frp-web-panel/services/rpc"
 	"github.com/yunj-yun/frp-web-panel/utils"
 	"github.com/yunj-yun/frp-web-panel/utils/logger"
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	"github.com/samber/lo"
-	"github.com/spf13/cast"
 )
 
 func UpdateFrpcHander(c *app.Context, req *pb.UpdateFRPCRequest) (*pb.UpdateFRPCResponse, error) {
@@ -75,24 +75,43 @@ func UpdateFrpcHander(c *app.Context, req *pb.UpdateFRPCRequest) (*pb.UpdateFRPC
 	}
 
 	srv, err := q.GetServerByServerID(userInfo, req.GetServerId())
-	if err != nil || srv == nil || len(srv.ServerIP) == 0 || len(srv.ConfigContent) == 0 {
-		logger.Logger(c).WithError(err).Errorf("cannot get server, server is not prepared, id: [%s]", req.GetServerId())
+	if err != nil || srv == nil {
+		logger.Logger(c).WithError(err).Errorf("cannot get server, id: [%s]", req.GetServerId())
 		return &pb.UpdateFRPCResponse{
-			Status: &pb.Status{Code: pb.RespCode_RESP_CODE_INVALID, Message: "cannot get server"},
+			Status: &pb.Status{Code: pb.RespCode_RESP_CODE_INVALID, Message: fmt.Sprintf("server %q was not found", req.GetServerId())},
 		}, fmt.Errorf("cannot get server")
 	}
-
-	if len(srv.ConfigContent) == 0 {
-		logger.Logger(c).Errorf("cannot get server, server is not prepared, id: [%s]", req.GetServerId())
+	// The client config needs the frps address and bind port. Older Servers were
+	// created with an empty config, so repair that here instead of failing: a
+	// Server record is only useful once it carries usable frps defaults.
+	if len(srv.ServerIP) == 0 {
+		logger.Logger(c).Warnf("server has no address, id: [%s]", req.GetServerId())
 		return &pb.UpdateFRPCResponse{
-			Status: &pb.Status{Code: pb.RespCode_RESP_CODE_INVALID, Message: "server is not prepared, pls update server config first"},
-		}, fmt.Errorf("server is not prepared, pls update server config first")
+			Status: &pb.Status{Code: pb.RespCode_RESP_CODE_INVALID, Message: fmt.Sprintf("server %q has no address yet; save the Server configuration first", req.GetServerId())},
+		}, fmt.Errorf("server has no address")
+	}
+	if len(srv.ConfigContent) == 0 {
+		logger.Logger(c).Warnf("server has no frps config, seeding defaults, id: [%s]", req.GetServerId())
+		if err := srv.SetConfigContent(models.DefaultServerConfig()); err != nil {
+			logger.Logger(c).WithError(err).Errorf("cannot seed server config, id: [%s]", req.GetServerId())
+			return &pb.UpdateFRPCResponse{
+				Status: &pb.Status{Code: pb.RespCode_RESP_CODE_INVALID, Message: fmt.Sprintf("cannot initialize the frps configuration of server %q", req.GetServerId())},
+			}, err
+		}
+		if err := m.UpdateServer(userInfo, srv); err != nil {
+			logger.Logger(c).WithError(err).Errorf("cannot persist seeded server config, id: [%s]", req.GetServerId())
+			return &pb.UpdateFRPCResponse{
+				Status: &pb.Status{Code: pb.RespCode_RESP_CODE_INVALID, Message: fmt.Sprintf("cannot initialize the frps configuration of server %q", req.GetServerId())},
+			}, err
+		}
 	}
 
 	srvConf, err := srv.GetConfigContent()
 	if srvConf == nil || err != nil {
-		logger.Logger(c).WithError(err).Errorf("cannot get server, id: [%s]", serverID)
-		return nil, err
+		logger.Logger(c).WithError(err).Errorf("cannot read server config, id: [%s]", req.GetServerId())
+		return &pb.UpdateFRPCResponse{
+			Status: &pb.Status{Code: pb.RespCode_RESP_CODE_INVALID, Message: fmt.Sprintf("cannot read the frps configuration of server %q", req.GetServerId())},
+		}, err
 	}
 
 	cliCfg.ServerAddr = srv.ServerIP
