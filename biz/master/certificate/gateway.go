@@ -7,12 +7,15 @@ import (
 	"regexp"
 	"strings"
 
+	v1 "github.com/fatedier/frp/pkg/config/v1"
+	"github.com/samber/lo"
 	"github.com/yunj-yun/frp-web-panel/common"
 	"github.com/yunj-yun/frp-web-panel/models"
 	"github.com/yunj-yun/frp-web-panel/pb"
 	"github.com/yunj-yun/frp-web-panel/services/app"
 	"github.com/yunj-yun/frp-web-panel/services/dao"
-	v1 "github.com/fatedier/frp/pkg/config/v1"
+	"github.com/yunj-yun/frp-web-panel/services/rpc"
+	"github.com/yunj-yun/frp-web-panel/utils/logger"
 )
 
 // gatewayDomainPattern intentionally accepts DNS names only.  Caddy can
@@ -259,7 +262,15 @@ func validateGatewayRouteReferences(ctx *app.Context, userInfo models.UserInfo, 
 		return gatewayRouteInput{}, fmt.Errorf("server %s has no frps configuration yet; save the Server configuration (it provides vhostHTTPPort) before creating a gateway route: %w", input.serverID, err)
 	}
 	if serverConfig.VhostHTTPPort <= 0 || serverConfig.VhostHTTPPort > 65535 {
-		return gatewayRouteInput{}, fmt.Errorf("server vhostHTTPPort must be configured before creating a gateway route")
+		// frp leaves vhostHTTPPort unset by design, so a Server that never had an
+		// HTTP vhost configured would block every gateway route. Assign a free
+		// port on demand and persist it, which keeps the frps config authoritative
+		// while sparing the user a round trip to the Server page.
+		assigned, assignErr := assignVhostHTTPPort(ctx, userInfo, server, serverConfig, query)
+		if assignErr != nil {
+			return gatewayRouteInput{}, assignErr
+		}
+		serverConfig.VhostHTTPPort = assigned
 	}
 	input.upstreamPort = uint16(serverConfig.VhostHTTPPort)
 	if input.listenPort == uint32(input.upstreamPort) {
@@ -381,6 +392,63 @@ func triggerGatewaySync(ctx *app.Context, userInfo models.UserInfo, serverID str
 	}()
 }
 
+// defaultVhostHTTPPort is the first candidate when a Server has no HTTP vhost
+// listener configured. frp leaves vhostHTTPPort unset, and without it a gateway
+// route has no upstream, so the first gateway route assigns one.
+const defaultVhostHTTPPort = 8080
+
+// vhostPortCandidates is how many sequential ports to probe before giving up.
+const vhostPortCandidates = 32
+
+// assignVhostHTTPPort picks a free TCP port for frps' HTTP vhost listener,
+// persists it into the Server's frps configuration, and returns it. The port
+// must not collide with Caddy's public listeners, another frps listener, an
+// existing gateway route, or a socket the node is observed to be listening on.
+func assignVhostHTTPPort(ctx *app.Context, userInfo models.UserInfo, server *models.ServerEntity, config *v1.ServerConfig, query dao.PortSnapshotQuery) (int, error) {
+	if ctx == nil || server == nil || config == nil {
+		return 0, fmt.Errorf("server configuration is required to assign vhostHTTPPort")
+	}
+	usedGatewayPorts := make(map[uint16]struct{})
+	routes, err := dao.NewQuery(ctx).ListGatewayRoutesByServer(userInfo, server.ServerID)
+	if err != nil {
+		return 0, fmt.Errorf("list gateway routes for vhostHTTPPort assignment: %w", err)
+	}
+	for _, route := range routes {
+		if route != nil {
+			usedGatewayPorts[route.ListenPort] = struct{}{}
+		}
+	}
+
+	for port := defaultVhostHTTPPort; port < defaultVhostHTTPPort+vhostPortCandidates && port <= 65535; port++ {
+		candidate := uint16(port)
+		if models.ServerPortReservationConflict(config, "tcp", candidate) != "" {
+			continue
+		}
+		if _, taken := usedGatewayPorts[candidate]; taken {
+			continue
+		}
+		if conflict, err := findObservedPortConflict(query, userInfo, server.ServerID, candidate); err != nil {
+			return 0, err
+		} else if conflict != "" {
+			continue
+		}
+		config.VhostHTTPPort = port
+		if err := server.SetConfigContent(config); err != nil {
+			return 0, fmt.Errorf("store assigned vhostHTTPPort: %w", err)
+		}
+		if err := dao.NewMutation(ctx).UpdateServer(userInfo, server); err != nil {
+			return 0, fmt.Errorf("persist assigned vhostHTTPPort: %w", err)
+		}
+		// frps only listens on the new vhost port after it reloads its config, so
+		// push it to the Agent now. Without this the gateway would point Caddy at
+		// a port nothing is bound to.
+		pushFrpsConfig(ctx, server)
+		logger.Logger(ctx).Infof("assigned vhostHTTPPort %d to server %s", port, server.ServerID)
+		return port, nil
+	}
+	return 0, fmt.Errorf("no free port found for vhostHTTPPort in range %d-%d; set it manually on the Server page", defaultVhostHTTPPort, defaultVhostHTTPPort+vhostPortCandidates-1)
+}
+
 func normalizeGatewayDomain(raw string) (string, error) {
 	domain := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(raw), "."))
 	if domain == "" {
@@ -468,4 +536,26 @@ func gatewayRouteToPB(route *models.GatewayRoute) *pb.GatewayRoute {
 		item.LastAppliedAt = route.LastAppliedAt.UnixMilli()
 	}
 	return item
+}
+
+// pushFrpsConfig sends the Server's current frps configuration to its Agent so
+// a freshly assigned vhostHTTPPort takes effect. The call is best effort: the
+// gateway route is still usable once the Agent reconnects and pulls config, so a
+// transient delivery failure must not fail route creation.
+func pushFrpsConfig(ctx *app.Context, server *models.ServerEntity) {
+	if ctx == nil || ctx.GetApp() == nil || server == nil {
+		return
+	}
+	appInstance := ctx.GetApp()
+	serverID := server.ServerID
+	config := append([]byte(nil), server.ConfigContent...)
+	go func() {
+		childCtx := app.NewContext(context.Background(), appInstance)
+		if _, err := rpc.CallClient(childCtx, serverID, pb.Event_EVENT_UPDATE_FRPS, &pb.UpdateFRPSRequest{
+			ServerId: lo.ToPtr(serverID),
+			Config:   config,
+		}); err != nil {
+			logger.Logger(childCtx).WithError(err).Warnf("push frps config after vhostHTTPPort assignment, server: [%s]", serverID)
+		}
+	}()
 }

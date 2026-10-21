@@ -702,6 +702,7 @@
     "empty": "No HTTPS gateways",
     "emptyHint": "Create a gateway and Caddy will request the domain certificate and forward traffic to the FRP HTTP tunnel.",
     "saved": "Gateway configuration saved",
+    "vhostAutoAssigned": "Assigned vhostHTTPPort {{port}} to the server automatically (change it on the Server page)",
     "updated": "Gateway synchronization queued",
     "operationFailed": "Gateway operation failed",
     "loadFailed": "Failed to load gateways"

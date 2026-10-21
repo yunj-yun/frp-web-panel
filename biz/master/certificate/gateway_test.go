@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	v1 "github.com/fatedier/frp/pkg/config/v1"
 	"github.com/yunj-yun/frp-web-panel/models"
 )
 
@@ -74,5 +75,25 @@ func TestContainsGatewayDomain(t *testing.T) {
 	}
 	if containsGatewaySubdomain("nested.app", "example.com", "nested.app.example.com") {
 		t.Fatal("containsGatewaySubdomain accepted a multi-label subdomain")
+	}
+}
+
+func TestServerPortReservationConflictBlocksVhostCandidates(t *testing.T) {
+	// The assignment loop relies on this helper to skip ports frps already owns.
+	cfg := &v1.ServerConfig{BindPort: 7000, WebServer: v1.WebServerConfig{Port: 7500}}
+	for _, tc := range []struct {
+		port uint16
+		want bool
+	}{
+		{port: 7000, want: true},  // bindPort
+		{port: 7500, want: true},  // webServer.port
+		{port: 8080, want: false}, // free
+		{port: 443, want: true},   // Caddy owns it
+		{port: 80, want: true},    // Caddy owns it
+	} {
+		got := models.ServerPortReservationConflict(cfg, "tcp", tc.port) != ""
+		if got != tc.want {
+			t.Errorf("port %d conflict = %v, want %v", tc.port, got, tc.want)
+		}
 	}
 }

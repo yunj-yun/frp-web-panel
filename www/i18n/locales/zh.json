@@ -701,6 +701,7 @@
     "empty": "还没有 HTTPS 网关",
     "emptyHint": "创建网关后，Caddy 会为域名申请证书并转发到 FRP HTTP 隧道。",
     "saved": "网关配置已保存",
+    "vhostAutoAssigned": "已自动为服务端分配 vhostHTTPPort {{port}}（可在服务端页面修改）",
     "updated": "网关同步任务已提交",
     "operationFailed": "网关操作失败",
     "loadFailed": "网关列表加载失败"
