@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"strings"
 
+	v1 "github.com/fatedier/frp/pkg/config/v1"
 	"github.com/yunj-yun/frp-web-panel/defs"
 	"github.com/yunj-yun/frp-web-panel/models"
 	"github.com/yunj-yun/frp-web-panel/services/app"
 	"github.com/yunj-yun/frp-web-panel/services/dao"
-	v1 "github.com/fatedier/frp/pkg/config/v1"
+	"github.com/yunj-yun/frp-web-panel/utils/logger"
 )
 
 // validateRemotePortAvailable checks the port that a TCP or UDP proxy asks
@@ -40,12 +41,16 @@ func validateRemotePortAvailable(
 	if err != nil {
 		return false, fmt.Errorf("get server for port validation: %w", err)
 	}
+	// A Server created but not yet configured has no frps config stored, so its
+	// reserved listeners (bindPort, vhostHTTPPort, ...) are unknown. Refusing to
+	// create the tunnel here would block the normal setup order where users add
+	// a Server and a tunnel before saving the frps config. Skip only the
+	// configured-listener comparison; proxy records and port reservations are
+	// still enforced below, and frps rejects a conflicting bind at apply time.
 	serverConfig, err := server.GetConfigContent()
 	if err != nil || serverConfig == nil {
-		if err == nil {
-			err = fmt.Errorf("empty server configuration")
-		}
-		return false, fmt.Errorf("read server configuration for port validation: %w", err)
+		logger.Logger(c).WithError(err).Warnf("skip configured listener check, server configuration is unavailable, server: [%s]", serverID)
+		serverConfig = nil
 	}
 
 	if reserved := proxyReservedServerPort(protocol, port, serverConfig); reserved != "" {

@@ -253,7 +253,10 @@ func validateGatewayRouteReferences(ctx *app.Context, userInfo models.UserInfo, 
 	}
 	serverConfig, err := server.GetConfigContent()
 	if err != nil {
-		return gatewayRouteInput{}, fmt.Errorf("server configuration is unavailable: %w", err)
+		// A gateway route needs the Server's frps vhostHTTPPort as its upstream,
+		// so this cannot be skipped the way the proxy port check is. Say what the
+		// user has to do instead of surfacing the raw "config content is empty".
+		return gatewayRouteInput{}, fmt.Errorf("server %s has no frps configuration yet; save the Server configuration (it provides vhostHTTPPort) before creating a gateway route: %w", input.serverID, err)
 	}
 	if serverConfig.VhostHTTPPort <= 0 || serverConfig.VhostHTTPPort > 65535 {
 		return gatewayRouteInput{}, fmt.Errorf("server vhostHTTPPort must be configured before creating a gateway route")

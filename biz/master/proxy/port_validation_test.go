@@ -80,3 +80,18 @@ func TestProxyReservedServerPort(t *testing.T) {
 		t.Fatalf("proxyReservedServerPort() = %q, want empty", got)
 	}
 }
+
+func TestProxyReservedServerPortWithoutServerConfig(t *testing.T) {
+	// A Server that has been created but not configured yet has no frps config.
+	// The configured-listener comparison must be skipped instead of failing the
+	// whole tunnel creation; Caddy's own listeners stay reserved regardless
+	// because they do not depend on the frps config.
+	if got := proxyReservedServerPort("tcp", 8080, nil); got != "" {
+		t.Fatalf("proxyReservedServerPort(nil) = %q, want empty", got)
+	}
+	for _, port := range []uint16{80, 443} {
+		if got := proxyReservedServerPort("tcp", port, nil); got == "" {
+			t.Fatalf("Caddy listener %d must stay reserved even without a server config", port)
+		}
+	}
+}
