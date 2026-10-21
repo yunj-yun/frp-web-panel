@@ -42,6 +42,7 @@ import { NeedUpgrade } from '@/config/notify'
 import { Label } from '../ui/label'
 import { Checkbox } from '../ui/checkbox'
 import { ClientUpgradeDialog } from '../base/client_upgrade_dialog'
+import { copyText } from '@/lib/clipboard'
 
 export type ClientTableSchema = {
   id: string
@@ -128,6 +129,14 @@ export const ClientID = ({ client }: { client: ClientTableSchema }) => {
   const platformInfo = useStore($platformInfo)
   const frontendPreference = useStore($frontendPreference)
 
+  const handleCopy = async (text: string) => {
+    if (await copyText(text)) {
+      toast.success(t('client.actions_menu.copy_success'))
+    } else {
+      toast.error(t('client.actions_menu.copy_failed'))
+    }
+  }
+
   if (!platformInfo) {
     return (
       <Button variant="link" className="px-0">
@@ -164,7 +173,7 @@ export const ClientID = ({ client }: { client: ClientTableSchema }) => {
             <div className="grid grid-cols-2 items-center gap-4">
               <Button
                 onClick={() =>
-                  navigator.clipboard.writeText(
+                  void handleCopy(
                     WindowsInstallCommand('client', client, {
                       ...platformInfo,
                       githubProxyUrl: frontendPreference.useServerGithubProxyUrl && frontendPreference.githubProxyUrl ? frontendPreference.githubProxyUrl : platformInfo.githubProxyUrl,
@@ -189,7 +198,7 @@ export const ClientID = ({ client }: { client: ClientTableSchema }) => {
             <div className="grid grid-cols-2 items-center gap-4">
               <Button
                 onClick={() =>
-                  navigator.clipboard.writeText(LinuxInstallCommand('client', client, {
+                  void handleCopy(LinuxInstallCommand('client', client, {
                     ...platformInfo,
                     githubProxyUrl: frontendPreference.useServerGithubProxyUrl && frontendPreference.githubProxyUrl ? frontendPreference.githubProxyUrl : platformInfo.githubProxyUrl,
                   }, frontendPreference.useServerGithubProxyUrl))
@@ -282,6 +291,14 @@ export const ClientSecret = ({ client }: { client: ClientTableSchema }) => {
   const { t } = useTranslation()
   const platformInfo = useStore($platformInfo)
 
+  const handleCopy = async (text: string) => {
+    if (await copyText(text)) {
+      toast.success(t('client.actions_menu.copy_success'))
+    } else {
+      toast.error(t('client.actions_menu.copy_failed'))
+    }
+  }
+
   if (!platformInfo) {
     return (
       <Button variant="link" className="px-0">
@@ -327,7 +344,7 @@ export const ClientSecret = ({ client }: { client: ClientTableSchema }) => {
               size="sm"
               variant="outline"
               className="w-full"
-              onClick={() => navigator.clipboard.writeText(ExecCommandStr('client', client, platformInfo))}
+              onClick={() => void handleCopy(ExecCommandStr('client', client, platformInfo))}
               disabled={!platformInfo}
             >
               {t('common.copy')}
@@ -336,10 +353,7 @@ export const ClientSecret = ({ client }: { client: ClientTableSchema }) => {
               <summary className="cursor-pointer text-sm font-medium">{t('client.compose.title')}</summary>
               <p className="mt-2 text-xs text-muted-foreground">{t('client.compose.description')}</p>
               <pre className="mt-2 max-h-64 overflow-auto rounded-md bg-muted p-3 font-mono text-xs whitespace-pre-wrap break-all">{compose}</pre>
-              <Button size="sm" variant="outline" className="mt-2 w-full" onClick={() => {
-                navigator.clipboard.writeText(compose)
-                toast(t('client.actions_menu.copy_success'))
-              }}>
+              <Button size="sm" variant="outline" className="mt-2 w-full" onClick={() => void handleCopy(compose)}>
                 {t('client.compose.copy')}
               </Button>
             </details>
@@ -418,6 +432,14 @@ export const ClientActions: React.FC<ClientItemProps> = ({ client, table }) => {
       ? frontendPreference.githubProxyUrl
       : platformInfo?.githubProxyUrl || ''
 
+  const handleCopy = async (text: string) => {
+    if (await copyText(text)) {
+      toast.success(t('client.actions_menu.copy_success'))
+    } else {
+      toast.error(t('client.actions_menu.copy_failed'))
+    }
+  }
+
   return (
     <>
       <ClientUpgradeDialog
@@ -444,17 +466,10 @@ export const ClientActions: React.FC<ClientItemProps> = ({ client, table }) => {
           <DropdownMenuLabel>{t('client.actions_menu.title')}</DropdownMenuLabel>
           <DropdownMenuItem
             onClick={() => {
-              try {
-                if (platformInfo) {
-                  navigator.clipboard.writeText(ExecCommandStr('client', client, platformInfo))
-                  toast(t('client.actions_menu.copy_success'))
-                } else {
-                  toast(t('client.actions_menu.copy_failed'))
-                }
-              } catch (error) {
-                toast(t('client.actions_menu.copy_failed'), {
-                  description: JSON.stringify(error),
-                })
+              if (platformInfo) {
+                void handleCopy(ExecCommandStr('client', client, platformInfo))
+              } else {
+                toast.error(t('client.actions_menu.copy_failed'))
               }
             }}
           >
@@ -462,20 +477,13 @@ export const ClientActions: React.FC<ClientItemProps> = ({ client, table }) => {
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => {
-              try {
-                if (platformInfo) {
-                  navigator.clipboard.writeText(LinuxInstallCommand('client', client, {
-                    ...platformInfo,
-                    githubProxyUrl: frontendPreference.useServerGithubProxyUrl && frontendPreference.githubProxyUrl ? frontendPreference.githubProxyUrl : platformInfo.githubProxyUrl,
-                  }, frontendPreference.useServerGithubProxyUrl))
-                  toast(t('client.actions_menu.copy_success'))
-                } else {
-                  toast(t('client.actions_menu.copy_failed'))
-                }
-              } catch (error) {
-                toast(t('client.actions_menu.copy_failed'), {
-                  description: JSON.stringify(error),
-                })
+              if (platformInfo) {
+                void handleCopy(LinuxInstallCommand('client', client, {
+                  ...platformInfo,
+                  githubProxyUrl: frontendPreference.useServerGithubProxyUrl && frontendPreference.githubProxyUrl ? frontendPreference.githubProxyUrl : platformInfo.githubProxyUrl,
+                }, frontendPreference.useServerGithubProxyUrl))
+              } else {
+                toast.error(t('client.actions_menu.copy_failed'))
               }
             }}
           >

@@ -17,6 +17,7 @@ import { ClientStatus_Status } from '@/lib/pb/api_master'
 import { DockerComposeFile } from '@/lib/consts'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { copyText } from '@/lib/clipboard'
 
 type NodeKind = 'client' | 'server'
 
@@ -85,6 +86,14 @@ function NodeDetailContent() {
       pathname: nodeKind === 'client' ? '/clientedit' : '/serveredit',
       query: nodeKind === 'client' ? { clientID: nodeID } : { serverID: nodeID },
     })
+  }
+
+  const handleCopyCompose = async () => {
+    if (await copyText(compose)) {
+      toast.success(t('nodeDetail.copied'))
+    } else {
+      toast.error(t('nodeDetail.copyCompose') + ' ' + t('common.failed'))
+    }
   }
 
   return (
@@ -157,7 +166,7 @@ function NodeDetailContent() {
                       <summary className="cursor-pointer text-sm font-medium">Docker Compose</summary>
                       {compose ? <>
                         <pre className="mt-3 max-h-64 overflow-auto rounded-md bg-muted p-3 font-mono text-xs whitespace-pre-wrap break-all">{compose}</pre>
-                        <Button size="sm" variant="outline" className="mt-2" onClick={() => { void navigator.clipboard.writeText(compose); toast(t('nodeDetail.copied')) }}>
+                        <Button size="sm" variant="outline" className="mt-2" onClick={() => void handleCopyCompose()}>
                           <Copy className="size-4" />{t('nodeDetail.copyCompose')}
                         </Button>
                       </> : <p className="mt-3 text-sm text-muted-foreground">{t('nodeDetail.composeUnavailable')}</p>}

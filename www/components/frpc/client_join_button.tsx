@@ -9,6 +9,7 @@ import { signToken } from '@/api/user'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { RespCode } from '@/lib/pb/common'
+import { copyText } from '@/lib/clipboard'
 
 export const ClientJoinButton = () => {
   const platformInfo = useStore($platformInfo)
@@ -42,6 +43,14 @@ export const ClientJoinButton = () => {
     }
   }
 
+  const handleCopy = async (text: string) => {
+    if (await copyText(text)) {
+      toast.success(t('common.copy') + ' ' + t('common.success'))
+    } else {
+      toast.error(t('common.copy') + ' ' + t('common.failed'))
+    }
+  }
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -66,7 +75,7 @@ export const ClientJoinButton = () => {
                 className="w-full"
                 onClick={() => {
                   if (joinToken) {
-                    navigator.clipboard.writeText(JoinCommandStr(platformInfo, joinToken))
+                    void handleCopy(JoinCommandStr(platformInfo, joinToken))
                   }
                 }}
                 disabled={!platformInfo}

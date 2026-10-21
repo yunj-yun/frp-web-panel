@@ -223,10 +223,24 @@ export const DockerComposeFile = (
   // read-only mount. The Agent reads CADDY_DATA_DIR, so the path is a single
   // source of truth shared with the Caddy service below.
   if (type === 'server') {
+    // Caddy requires a real newline after the opening brace; a single-line
+    // `:80 { respond ... }` is rejected by the Caddyfile adapter with
+    // "Unexpected '}' because no matching opening brace". That made the Caddy
+    // container exit immediately, so its admin API on 127.0.0.1:2019 never came
+    // up and every certificate request failed with "connection refused".
+    //
+    // printf emits one line per argument, so the braces must be separate lines.
+    // The file is rewritten whenever it is missing, empty, or fails Caddy's own
+    // validation: older releases wrote the invalid single-line form, and that
+    // file would otherwise keep crashing the container after an upgrade.
     const caddyCommand = [
       '/bin/sh',
       '-ec',
-      'mkdir -p /etc/caddy /data /config; if [ ! -s /etc/caddy/Caddyfile ]; then printf \'%s\\n\' \' :80 { respond "Caddy is ready" }\' | sed "s/^ //" > /etc/caddy/Caddyfile; fi; exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile',
+      [
+        'mkdir -p /etc/caddy /data /config',
+        'if [ ! -s /etc/caddy/Caddyfile ] || ! caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1; then printf \'%s\\n\' \':80 {\' \'    respond "Caddy is ready"\' \'}\' > /etc/caddy/Caddyfile; fi',
+        'exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile',
+      ].join('; '),
     ]
     return `${compose}\n    environment:\n      CADDY_ADMIN_URL: http://127.0.0.1:2019\n      CADDY_DATA_DIR: ${CADDY_DATA_MOUNT}\n    volumes:\n      - ./caddy/data:${CADDY_DATA_MOUNT}:ro\n  caddy:\n    image: caddy:2-alpine\n    container_name: frp-panel-caddy\n    network_mode: host\n    environment:\n      CADDY_DATA_DIR: /data\n    restart: unless-stopped\n    depends_on:\n      - ${serviceName}\n    command: ${JSON.stringify(caddyCommand)}\n    volumes:\n      - ./caddy:/etc/caddy\n      - ./caddy/data:/data\n      - ./caddy/config:/config`
   }

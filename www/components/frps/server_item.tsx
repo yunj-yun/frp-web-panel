@@ -39,6 +39,7 @@ import { toast } from 'sonner'
 import { $serverTableRefetchTrigger } from '@/store/refetch-trigger'
 import { Checkbox } from '../ui/checkbox'
 import { Label } from '../ui/label'
+import { copyText } from '@/lib/clipboard'
 
 export type ServerTableSchema = {
   id: string
@@ -126,6 +127,14 @@ export const ServerID = ({ server }: { server: ServerTableSchema }) => {
   const platformInfo = useStore($platformInfo)
   const frontendPreference = useStore($frontendPreference)
 
+  const handleCopy = async (text: string) => {
+    if (await copyText(text)) {
+      toast.success(t('server.actions_menu.copy_success'))
+    } else {
+      toast.error(t('server.actions_menu.copy_failed'))
+    }
+  }
+
   if (!platformInfo) {
     return (
       <Button variant="link" className="px-0">
@@ -161,7 +170,7 @@ export const ServerID = ({ server }: { server: ServerTableSchema }) => {
             </div>
             <div className="grid grid-cols-2 items-center gap-4">
               <Button
-                onClick={() => navigator.clipboard.writeText(WindowsInstallCommand('server', server, {
+                onClick={() => void handleCopy(WindowsInstallCommand('server', server, {
                   ...platformInfo,
                   githubProxyUrl: frontendPreference.useServerGithubProxyUrl && frontendPreference.githubProxyUrl ? frontendPreference.githubProxyUrl : platformInfo.githubProxyUrl,
                 }, frontendPreference.useServerGithubProxyUrl))}
@@ -182,7 +191,7 @@ export const ServerID = ({ server }: { server: ServerTableSchema }) => {
             </div>
             <div className="grid grid-cols-2 items-center gap-4">
               <Button
-                onClick={() => navigator.clipboard.writeText(LinuxInstallCommand('server', server, {
+                onClick={() => void handleCopy(LinuxInstallCommand('server', server, {
                   ...platformInfo,
                   githubProxyUrl: frontendPreference.useServerGithubProxyUrl && frontendPreference.githubProxyUrl ? frontendPreference.githubProxyUrl : platformInfo.githubProxyUrl,
                 }, frontendPreference.useServerGithubProxyUrl))}
@@ -260,6 +269,14 @@ export const ServerSecret = ({ server }: { server: ServerTableSchema }) => {
   const { t } = useTranslation()
   const platformInfo = useStore($platformInfo)
 
+  const handleCopy = async (text: string) => {
+    if (await copyText(text)) {
+      toast.success(t('server.actions_menu.copy_success'))
+    } else {
+      toast.error(t('server.actions_menu.copy_failed'))
+    }
+  }
+
   if (!platformInfo) {
     return (
       <Button variant="link" className="px-0">
@@ -298,7 +315,7 @@ export const ServerSecret = ({ server }: { server: ServerTableSchema }) => {
               size="sm"
               variant="outline"
               className="w-full"
-              onClick={() => navigator.clipboard.writeText(ExecCommandStr('server', server, platformInfo))}
+              onClick={() => void handleCopy(ExecCommandStr('server', server, platformInfo))}
               disabled={!platformInfo}
             >
               {t('common.copy')}
@@ -307,10 +324,7 @@ export const ServerSecret = ({ server }: { server: ServerTableSchema }) => {
               <summary className="cursor-pointer text-sm font-medium">{t('server.compose.title')}</summary>
               <p className="mt-2 text-xs text-muted-foreground">{t('server.compose.description')}</p>
               <pre className="mt-2 max-h-64 overflow-auto rounded-md bg-muted p-3 font-mono text-xs whitespace-pre-wrap break-all">{compose}</pre>
-              <Button size="sm" variant="outline" className="mt-2 w-full" onClick={() => {
-                navigator.clipboard.writeText(compose)
-                toast(t('server.actions_menu.copy_success'))
-              }}>
+              <Button size="sm" variant="outline" className="mt-2 w-full" onClick={() => void handleCopy(compose)}>
                 {t('server.compose.copy')}
               </Button>
             </details>
@@ -330,6 +344,14 @@ export const ServerActions: React.FC<ServerItemProps> = ({ server, table }) => {
   const { t } = useTranslation()
   const router = useRouter()
   const platformInfo = useStore($platformInfo)
+
+  const handleCopy = async (text: string) => {
+    if (await copyText(text)) {
+      toast.success(t('server.actions_menu.copy_success'))
+    } else {
+      toast.error(t('server.actions_menu.copy_failed'))
+    }
+  }
 
   const removeServer = useMutation({
     mutationFn: deleteServer,
@@ -367,15 +389,10 @@ export const ServerActions: React.FC<ServerItemProps> = ({ server, table }) => {
           <DropdownMenuLabel>{t('server.actions_menu.title')}</DropdownMenuLabel>
           <DropdownMenuItem
             onClick={() => {
-              try {
-                if (platformInfo) {
-                  navigator.clipboard.writeText(ExecCommandStr('server', server, platformInfo))
-                  toast(t('server.actions_menu.copy_success'))
-                } else {
-                  toast(t('server.actions_menu.copy_failed'))
-                }
-              } catch (error) {
-                toast(t('server.actions_menu.copy_failed'))
+              if (platformInfo) {
+                void handleCopy(ExecCommandStr('server', server, platformInfo))
+              } else {
+                toast.error(t('server.actions_menu.copy_failed'))
               }
             }}
           >

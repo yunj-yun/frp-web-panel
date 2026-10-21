@@ -38,7 +38,14 @@ func UpdateCaddyHandler(ctx *app.Context, req *pb.UpdateCaddyRequest) (*pb.Updat
 		return &pb.UpdateCaddyResponse{Status: &pb.Status{Code: pb.RespCode_RESP_CODE_INVALID, Message: err.Error()}, ConfigHash: hash}, err
 	}
 	if err := admin.Apply(ctx, config); err != nil {
-		return &pb.UpdateCaddyResponse{Status: &pb.Status{Code: pb.RespCode_RESP_CODE_INVALID, Message: err.Error()}, ConfigHash: hash}, err
+		// A refused connection to the admin API almost always means the Caddy
+		// container is not running, which is a deployment problem rather than a
+		// bad Caddyfile. Say so explicitly; the raw dial error alone sends users
+		// looking at DNS and ACME instead of `docker compose ps`.
+		return &pb.UpdateCaddyResponse{
+			Status:     &pb.Status{Code: pb.RespCode_RESP_CODE_INVALID, Message: caddyApplyErrorMessage(err)},
+			ConfigHash: hash,
+		}, err
 	}
 	// Caddy loads the configuration before ACME has necessarily completed. Read
 	// the public certificate metadata after the load so Master can distinguish a
@@ -69,4 +76,19 @@ func validateServer(ctx *app.Context, base *pb.ServerBase) error {
 		return fmt.Errorf("invalid server credentials")
 	}
 	return nil
+}
+
+// caddyApplyErrorMessage turns a raw admin API failure into an actionable
+// message. The most common cause is that the Caddy container never started, so
+// the hint points at the container state instead of ACME or DNS.
+func caddyApplyErrorMessage(err error) string {
+	if err == nil {
+		return ""
+	}
+	message := err.Error()
+	lower := strings.ToLower(message)
+	if strings.Contains(lower, "connection refused") || strings.Contains(lower, "no such host") || strings.Contains(lower, "connect:") {
+		return fmt.Sprintf("%s (Caddy admin API is unreachable: verify the caddy container is running with `docker compose ps` and that CADDY_ADMIN_URL matches its admin listener)", message)
+	}
+	return message
 }
