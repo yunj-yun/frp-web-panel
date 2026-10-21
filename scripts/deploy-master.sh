@@ -387,6 +387,14 @@ fi
 printf 'Master is healthy. Data directory: %s/data\n' "$DEPLOY_DIR"
 printf 'Source commit: %s\n' "$SOURCE_COMMIT"
 printf 'Image tag: %s\n' "$TAG"
+# Generated node Compose files reference the floating `latest` tag. A local
+# build loads that tag too, so the node commands below stay compatible with
+# the Compose files produced by the Master.
+if [[ "$BUILD_IMAGE" == "true" ]]; then
+  printf 'Node image tag: %s:latest\n' "$IMAGE_REPOSITORY"
+else
+  printf 'Node image tag: %s:latest (pull it, or build locally to load this tag)\n' "$IMAGE_REPOSITORY"
+fi
 printf 'Node source checkout and build commands:\n'
 printf 'cd "$HOME"\n'
 printf 'if [ -d frp-web-panel/.git ]; then git -C frp-web-panel fetch origin main; else git clone --branch main https://github.com/yunj-yun/frp-web-panel.git; fi\n'

@@ -8,6 +8,7 @@ import (
 	"github.com/yunj-yun/frp-web-panel/pb"
 	"github.com/yunj-yun/frp-web-panel/services/app"
 	"github.com/yunj-yun/frp-web-panel/services/caddy"
+	"github.com/yunj-yun/frp-web-panel/utils/logger"
 )
 
 // GetCaddyStatusHandler returns certificate metadata observed in the local
@@ -24,5 +25,18 @@ func GetCaddyStatusHandler(ctx *app.Context, req *pb.GetCaddyStatusRequest) (*pb
 	if scanErr != nil {
 		return &pb.GetCaddyStatusResponse{Status: &pb.Status{Code: pb.RespCode_RESP_CODE_INVALID, Message: scanErr.Error()}, Certificates: certificates}, scanErr
 	}
+	certificates = caddy.MergeACMEFailures(certificates, acmeFailures(ctx, dataDir))
 	return &pb.GetCaddyStatusResponse{Status: &pb.Status{Code: pb.RespCode_RESP_CODE_SUCCESS, Message: "ok"}, Certificates: certificates}, nil
+}
+
+// acmeFailures reads Caddy's ACME diagnostics. A missing or unreadable log is
+// reported at debug level and otherwise ignored: certificate metadata read
+// from disk remains valid and useful on its own.
+func acmeFailures(ctx *app.Context, dataDir string) map[string]*caddy.ACMEFailure {
+	failures, err := caddy.ScanACMEFailures(dataDir)
+	if err != nil {
+		logger.Logger(ctx).WithError(err).Debugf("scan Caddy ACME log")
+		return nil
+	}
+	return failures
 }

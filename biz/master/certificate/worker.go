@@ -90,6 +90,53 @@ func RefreshCertificateStatuses(appInstance app.Application) {
 		userInfo := &models.UserEntity{UserID: scope.userID, TenantID: scope.tenantID, Status: models.STATUS_NORMAL}
 		applyCertificateMetadata(ctx, userInfo, items, response.GetCertificates())
 	}
+	// Caddy completes ACME asynchronously and reports failures through its log,
+	// which the Agent now forwards. A certificate can still stay pending when the
+	// Agent is offline, the log is unavailable, or the failure happened before the
+	// current log window; mark those records as errors so they stop looking like
+	// an in-progress request.
+	markStalePendingCertificates(ctx)
+}
+
+// pendingCertificateTimeout is how long a certificate may stay pending before
+// the Master reports it as failed. ACME orders normally resolve within a few
+// minutes; the longer window tolerates slow DNS propagation and Caddy retries.
+const pendingCertificateTimeout = 15 * time.Minute
+
+// staleCertificateMessage is stored when no ACME diagnostic could be collected.
+// It explains where to look next instead of implying the request is still live.
+// English matches the rest of the backend messages and the ACME errors Caddy
+// itself reports, which the UI displays verbatim.
+const staleCertificateMessage = "certificate issuance did not complete in time: Caddy neither issued a certificate nor reported an ACME error. Check that the domain resolves to this Server and that ports 80/443 are reachable; see the Caddy log on the Server for ACME details."
+
+func markStalePendingCertificates(ctx *app.Context) {
+	now := time.Now()
+	stale, err := dao.NewQuery(ctx).AdminListStalePendingCertificates(now.Add(-pendingCertificateTimeout), 100)
+	if err != nil {
+		logger.Logger(ctx).WithError(err).Error("list stale pending certificates")
+		return
+	}
+	mutation := dao.NewMutation(ctx)
+	for _, certificate := range stale {
+		if certificate == nil || !isCertificateStale(certificate, now, pendingCertificateTimeout) {
+			continue
+		}
+		if err := mutation.AdminUpdateManagedCertificateStatus(certificate.ID, certificate.UserID, certificate.TenantID,
+			models.ManagedCertificateStatusError, staleCertificateMessage, certificate.Issuer, certificate.Fingerprint,
+			certificate.StorageID, certificate.IssuedAt, certificate.ExpiresAt); err != nil {
+			logger.Logger(ctx).WithError(err).Warnf("mark certificate %d as stale", certificate.ID)
+		}
+	}
+}
+
+// isCertificateStale reports whether a certificate has been pending longer than
+// the timeout. The query already filters on updated_at, but re-checking here
+// keeps the decision in one place and makes it testable.
+func isCertificateStale(certificate *models.ManagedCertificate, now time.Time, timeout time.Duration) bool {
+	if certificate == nil || certificate.Status != models.ManagedCertificateStatusPending {
+		return false
+	}
+	return now.Sub(certificate.UpdatedAt) > timeout
 }
 
 func processJob(ctx *app.Context, jobID uint) error {

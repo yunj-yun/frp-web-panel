@@ -2,7 +2,7 @@
 
 本文默认使用 Docker Hub 镜像部署：镜像发布者为 `lujuya`，仓库为 `lujuya/frp-web-panel`。Master、Server、Client 使用同一个镜像和 tag；也可以在每台主机本地构建后使用本地镜像。
 
-脚本默认按当前源码 commit 自动生成 `local-<commit>` tag。使用 Docker Hub 时，先推送 `lujuya/frp-web-panel:<tag>`，再在节点 Compose 中使用同一个 tag。Master 部署完成后记下输出的 `Source commit` 和 `Image tag`；各节点也可以检出同一个 commit 后本地构建相同 tag。
+脚本默认按当前源码 commit 自动生成 `local-<commit>` tag，并在本机加载时同时打上 `latest`。Master 生成的节点 Compose 固定使用 `latest`，因此节点可直接 `docker compose pull` 或本地构建后启动；需要固定版本时把 Compose 中的 `image` 改成 `lujuya/frp-web-panel:<tag>`。Master 部署完成后记下输出的 `Source commit` 和 `Image tag`，它们仍可用于排错和回滚。
 
 ## 部署前准备
 
@@ -20,7 +20,7 @@ cd frp-web-panel
 sudo ./scripts/deploy-master.sh
 ```
 
-脚本会按当前源码 commit 自动命名 tag，在当前主机构建并加载镜像，然后启动 Master，不会拉取或推送项目镜像。部署成功后会打印 `Source commit`、`Image tag` 和可直接复制到节点执行的源码构建命令。
+脚本会按当前源码 commit 自动命名 tag，在当前主机构建并加载镜像（同时打上供节点 Compose 使用的 `latest` tag），然后启动 Master，不会拉取或推送项目镜像。部署成功后会打印 `Source commit`、`Image tag`、节点镜像 tag 和可直接复制到节点执行的源码构建命令。
 
 脚本默认从主机默认路由探测 IPv4 地址作为 Master API/RPC 地址，不要求域名。这个 IP 必须能被浏览器和 Server/Client 主机访问；首次启动后脚本会输出 `Web UI` 地址。要使用域名时，可在首次部署命令增加：
 
@@ -42,14 +42,14 @@ sudo docker compose logs --tail=100 master
 
 ## 2. 在 Server/Client 主机本地构建镜像
 
-在每台 Server/Client 主机终端，将 Master 部署输出中 `Node source checkout and build commands` 标题下的命令原样复制粘贴执行。命令会创建或更新独立源码目录、检出 Master 使用的完整 commit，并在本机加载匹配 tag 的镜像；无需手动设置版本变量或镜像参数。
+在每台 Server/Client 主机终端，将 Master 部署输出中 `Node source checkout and build commands` 标题下的命令原样复制粘贴执行。命令会创建或更新独立源码目录、检出 Master 使用的完整 commit，并在本机加载镜像；构建产物同时带有 `local-<commit>` 和 `latest` 两个 tag，后者与 Master 生成的节点 Compose 一致，无需手动修改 `image`。
 
 构建脚本会自动将本机架构镜像加载到 Docker。节点之间不需要共享镜像文件，也不需要登录镜像仓库；x86_64 和 ARM 主机分别在本机执行构建即可。若当前账户没有 Docker 权限，请给 Docker 命令加 `sudo`。
 
 ## 3. 从 Master 取 Compose 并在节点目录启动
 
 1. 登录 Master，在 Server 或 Client 页面创建节点。
-2. 打开节点详情页，复制或下载生成的 `docker-compose.yml`。它包含节点 ID、密钥、Master 连接地址和 Master 当前版本的镜像 tag。
+2. 打开节点详情页，复制或下载生成的 `docker-compose.yml`。它包含节点 ID、密钥、Master 连接地址，镜像固定为 `latest` tag，节点启动或执行 `docker compose pull` 时获取最新发布镜像；版本信息仍由 Master 单独展示，便于排错。
 3. 在对应节点主机创建自己的部署目录。Server 和 Client 可使用不同目录；将复制的内容保存为 `docker-compose.yml`，文件包含节点凭据，请限制权限。
 
 Server 示例：
@@ -74,9 +74,11 @@ docker compose ps
 docker compose logs --tail=100 -f
 ```
 
-Master 生成的应用服务使用 `lujuya/frp-web-panel:<tag>` 和 `pull_policy: always`，执行 `docker compose pull` 或 `docker compose up -d` 时会从 Docker Hub 获取应用镜像。Server Compose 中的官方 `caddy:2-alpine` 也会从 Docker Hub 拉取。部署目录和源码目录应分开：Server 的 Caddy 会在 Compose 当前目录创建并持久化 `./caddy`、`./caddy/data` 和 `./caddy/config`。启用 HTTPS Gateway 前，确认宿主机 80/443 端口可用；请保留 Caddy 数据目录，否则会丢失证书和续期状态。
+Master 生成的应用服务使用 `lujuya/frp-web-panel:latest` 和 `pull_policy: always`，执行 `docker compose pull` 或 `docker compose up -d` 时会从 Docker Hub 获取最新应用镜像。Server Compose 中的官方 `caddy:2-alpine` 也会从 Docker Hub 拉取。部署目录和源码目录应分开：Server 的 Caddy 会在 Compose 当前目录创建并持久化 `./caddy`、`./caddy/data` 和 `./caddy/config`。启用 HTTPS Gateway 前，确认宿主机 80/443 端口可用；请保留 Caddy 数据目录，否则会丢失证书和续期状态。
 
-回 Master 查看节点状态，确认 Server/Client 在线、版本和心跳正常。若节点未上线，检查 Compose 日志、Compose 中的 Master 地址、节点到 Master 的 `9000/9001` 连通性，以及镜像 tag 是否一致。
+Caddy 由面板生成的配置自动监听 80（HTTP-01 challenge 与 HTTP 跳转）和 443，不需要在 Caddyfile 或 Compose 里手动添加端口映射；但宿主机 80/443 不能被 `frps` 的 `vhostHTTPPort` 或其他进程占用，并需要在防火墙/安全组中放行。证书申请失败时，在证书中心打开“查看请求记录”查看错误，并可跳转到目标服务端日志；Caddy 运行日志会写入 Caddy 数据目录的 `logs/caddy.log`。生成的 Server Compose 会把该目录只读挂载到 frp-panel 容器的 `/caddy-data`（Caddy 容器内仍是 `/data`），避免与 frp-panel 自身的 `/data`（SQLite 数据库）冲突。
+
+回 Master 查看节点状态，确认 Server/Client 在线、版本和心跳正常。若节点未上线，检查 Compose 日志、Compose 中的 Master 地址、节点到 Master 的 `9000/9001` 连通性，以及节点本地缓存的 `latest` 镜像是否早于当前 Master 版本（可执行 `docker compose pull` 更新）。
 
 ## 升级
 

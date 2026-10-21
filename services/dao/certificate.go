@@ -19,6 +19,11 @@ type ManagedCertificateQuery interface {
 	AdminGetManagedCertificate(certificateID uint) (*models.ManagedCertificate, error)
 	AdminListManagedCertificatesByServer(userID, tenantID int, serverID string) ([]*models.ManagedCertificate, error)
 	AdminListManagedCertificates() ([]*models.ManagedCertificate, error)
+	// AdminListStalePendingCertificates returns certificates that have been
+	// waiting for an ACME order longer than the supplied cutoff. Caddy completes
+	// issuance asynchronously, so a pending record is normal for a short window
+	// and suspicious afterwards.
+	AdminListStalePendingCertificates(updatedBefore time.Time, limit int) ([]*models.ManagedCertificate, error)
 }
 
 type ManagedCertificateMutation interface {
@@ -148,6 +153,21 @@ func (q *managedCertificateQuery) AdminListManagedCertificatesByServer(userID, t
 func (q *managedCertificateQuery) AdminListManagedCertificates() ([]*models.ManagedCertificate, error) {
 	var certificates []*models.ManagedCertificate
 	err := q.ctx.GetApp().GetDBManager().GetDefaultDB().Where("status <> ?", models.ManagedCertificateStatusRevoked).Order("server_id ASC, primary_domain ASC").Find(&certificates).Error
+	return certificates, err
+}
+
+// AdminListStalePendingCertificates returns pending certificates whose last
+// update predates the cutoff. The scheduler uses it to surface issuance that
+// Caddy never completed instead of leaving the record pending indefinitely.
+func (q *managedCertificateQuery) AdminListStalePendingCertificates(updatedBefore time.Time, limit int) ([]*models.ManagedCertificate, error) {
+	if limit < 1 || limit > 200 {
+		return nil, fmt.Errorf("invalid stale certificate limit")
+	}
+	var certificates []*models.ManagedCertificate
+	err := q.ctx.GetApp().GetDBManager().GetDefaultDB().
+		Where("status = ?", models.ManagedCertificateStatusPending).
+		Where("updated_at < ?", updatedBefore).
+		Order("updated_at ASC").Limit(limit).Find(&certificates).Error
 	return certificates, err
 }
 

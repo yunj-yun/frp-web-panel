@@ -179,6 +179,12 @@ CLIENT_API_URL=${apiUrl}
 CLIENT_RPC_URL=${rpcUrl}`
 }
 
+// CADDY_DATA_MOUNT is where the Server Agent sees Caddy's data directory.
+// It must not be /data: the image keeps its SQLite database at /data/data.db
+// and the Agent's Caddy mount is read-only, so sharing the path would shadow
+// the container's own data directory.
+const CADDY_DATA_MOUNT = '/caddy-data'
+
 export const DockerComposeFile = (
   type: 'client' | 'server',
   item: { id: string; secret: string },
@@ -198,20 +204,31 @@ export const DockerComposeFile = (
     getClientRpcUrl(info, applyPref),
   ].map((argument) => argument.replace(/\$/g, '$$$$'))
   const serviceName = type === 'client' ? 'frp-panel-client' : 'frp-panel-server'
-  const imageTag = info.imageTag || 'latest'
+  // Node Compose files intentionally pull the floating `latest` tag so a node
+  // always starts from the newest published image without regenerating its
+  // Compose file. Build metadata (`info.imageTag`, node version/heartbeat) is
+  // still reported separately for diagnostics, so version pinning remains
+  // available by replacing this tag manually.
+  const imageTag = 'latest'
   const compose = `services:\n  ${serviceName}:\n    image: ${imageRepository}:${imageTag}\n    pull_policy: always\n    container_name: ${serviceName}\n    network_mode: host\n    restart: unless-stopped\n    command: ${JSON.stringify(command)}`
 
   // Caddy shares the Server host network so it can own the public HTTP/HTTPS
   // listeners directly. The config and storage directories are persisted next
   // to the compose file; the small bootstrap command keeps the generated file
   // runnable before the Server Agent has pushed its first route configuration.
+  //
+  // The Caddy data directory is mounted at a dedicated path inside the
+  // frp-panel container. Mounting it at /data would collide with the image's
+  // own /data volume (DB_DSN defaults to /data/data.db) and shadow it with a
+  // read-only mount. The Agent reads CADDY_DATA_DIR, so the path is a single
+  // source of truth shared with the Caddy service below.
   if (type === 'server') {
     const caddyCommand = [
       '/bin/sh',
       '-ec',
       'mkdir -p /etc/caddy /data /config; if [ ! -s /etc/caddy/Caddyfile ]; then printf \'%s\\n\' \' :80 { respond "Caddy is ready" }\' | sed "s/^ //" > /etc/caddy/Caddyfile; fi; exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile',
     ]
-    return `${compose}\n    environment:\n      CADDY_ADMIN_URL: http://127.0.0.1:2019\n      CADDY_DATA_DIR: /data\n    volumes:\n      - ./caddy/data:/data:ro\n  caddy:\n    image: caddy:2-alpine\n    container_name: frp-panel-caddy\n    network_mode: host\n    restart: unless-stopped\n    depends_on:\n      - ${serviceName}\n    command: ${JSON.stringify(caddyCommand)}\n    volumes:\n      - ./caddy:/etc/caddy\n      - ./caddy/data:/data\n      - ./caddy/config:/config`
+    return `${compose}\n    environment:\n      CADDY_ADMIN_URL: http://127.0.0.1:2019\n      CADDY_DATA_DIR: ${CADDY_DATA_MOUNT}\n    volumes:\n      - ./caddy/data:${CADDY_DATA_MOUNT}:ro\n  caddy:\n    image: caddy:2-alpine\n    container_name: frp-panel-caddy\n    network_mode: host\n    environment:\n      CADDY_DATA_DIR: /data\n    restart: unless-stopped\n    depends_on:\n      - ${serviceName}\n    command: ${JSON.stringify(caddyCommand)}\n    volumes:\n      - ./caddy:/etc/caddy\n      - ./caddy/data:/data\n      - ./caddy/config:/config`
   }
   return compose
 }

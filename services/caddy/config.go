@@ -86,7 +86,20 @@ func RenderGatewayCaddyfileWithCertificates(routes []*models.GatewayRoute, certi
 	// Keep Caddy's automatic HTTPS challenge listener enabled while avoiding an
 	// implicit HTTP-to-HTTPS redirect for FRP routes that may also be served by
 	// an explicitly configured HTTP proxy.
-	b.WriteString("{\n\tauto_https disable_redirects\n}\n")
+	//
+	// Caddy binds port 80 only for the duration of an HTTP-01 challenge, so no
+	// explicit :80 site is required. The global log directive persists ACME
+	// diagnostics next to the certificate data, which lets the Server Agent
+	// report why an issuance failed instead of leaving it pending forever.
+	b.WriteString("{\n\tauto_https disable_redirects\n")
+	b.WriteString("\tlog {\n")
+	b.WriteString("\t\toutput file {$CADDY_DATA_DIR:/data}/logs/caddy.log {\n")
+	b.WriteString("\t\t\troll_size 10MiB\n")
+	b.WriteString("\t\t\troll_keep 3\n")
+	b.WriteString("\t\t}\n")
+	b.WriteString("\t\tlevel INFO\n")
+	b.WriteString("\t}\n")
+	b.WriteString("}\n")
 	for _, route := range items {
 		renderRouteSite(&b, &route, certificateChallenges[route.CertificateID])
 	}

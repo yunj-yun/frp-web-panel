@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, Pencil, Plus, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react'
+import { AlertCircle, History, Pencil, Plus, RefreshCw, ScrollText, ShieldCheck, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
-import { createManagedCertificate, deleteManagedCertificate, listManagedCertificates, requestCertificate, updateManagedCertificate } from '@/api/certificate'
+import { createManagedCertificate, deleteManagedCertificate, listCertificateJobs, listManagedCertificates, requestCertificate, updateManagedCertificate } from '@/api/certificate'
 import { Header } from '@/components/header'
 import { RootLayout } from '@/components/layout'
 import { Providers } from '@/components/providers'
@@ -20,6 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea'
 import {
   CreateManagedCertificateRequest,
+  ListCertificateJobsRequest,
   ListManagedCertificatesRequest,
   ManagedCertificate,
   RequestCertificateRequest,
@@ -163,12 +164,152 @@ function CertificateDialog({
   )
 }
 
+const jobStatusVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
+  if (status === 'success') return 'default'
+  if (status === 'failed') return 'destructive'
+  if (status === 'running') return 'secondary'
+  return 'outline'
+}
+
+const jobStatusLabel = (translate: (key: string, options?: { defaultValue?: string }) => string, status: string) => {
+  const key = status ? `certificates.jobStatus${status.charAt(0).toUpperCase()}${status.slice(1)}` : 'certificates.jobStatusQueued'
+  return translate(key, { defaultValue: status || translate('certificates.jobStatusQueued') })
+}
+
+const jobActionLabel = (translate: (key: string, options?: { defaultValue?: string }) => string, action: string) => {
+  const key = action ? `certificates.jobAction${action.charAt(0).toUpperCase()}${action.slice(1)}` : ''
+  return key ? translate(key, { defaultValue: action }) : action
+}
+
+function CertificateJobsDialog({
+  open,
+  setOpen,
+  certificate,
+}: {
+  open: boolean
+  setOpen: (open: boolean) => void
+  certificate?: ManagedCertificate
+}) {
+  const { t, i18n } = useTranslation()
+  const jobsQuery = useQuery({
+    queryKey: ['certificateJobs', certificate?.id],
+    queryFn: () => listCertificateJobs(ListCertificateJobsRequest.create({ certificateId: certificate?.id ?? 0, page: 1, pageSize: 50 })),
+    enabled: open && Boolean(certificate?.id),
+    refetchInterval: open ? 10_000 : false,
+  })
+  const jobs = useMemo(() => jobsQuery.data?.jobs ?? [], [jobsQuery.data?.jobs])
+  const formatTimestamp = (value: bigint) => value ? new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'medium' }).format(Number(value)) : '-'
+
+  // Caddy runs on the target Server and writes its ACME errors to its data
+  // directory. The Server log stream shows the raw Caddy output, which is the
+  // fastest way to see why an ACME challenge failed.
+  const openServerLogs = () => {
+    if (!certificate?.serverId) return
+    window.open(`/streamlog?clientID=${encodeURIComponent(certificate.serverId)}&clientType=2`, '_blank', 'noopener')
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>{t('certificates.jobHistoryTitle')}</DialogTitle>
+          <DialogDescription>
+            {certificate ? `${certificate.primaryDomain} · ${t('certificates.jobHistoryDescription')}` : t('certificates.jobHistoryDescription')}
+          </DialogDescription>
+        </DialogHeader>
+        {certificate && (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">{t('certificates.status')}:</span>
+            <Badge variant={statusVariant(certificate.status)}>{statusLabel(t, certificate.status)}</Badge>
+            <span className="text-muted-foreground">{t('certificates.expiresAt')}: {formatDate(certificate.expiresAt, t('certificates.notIssued'), i18n.language)}</span>
+          </div>
+        )}
+        <div className="grid gap-3">
+          {certificate?.errorMessage && (
+            <div className="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
+              <AlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
+              <div className="space-y-1">
+                <p className="font-medium text-destructive">{t('certificates.currentError')}</p>
+                <pre className="max-h-32 overflow-auto whitespace-pre-wrap break-all font-mono text-xs text-destructive">{certificate.errorMessage}</pre>
+                <p className="text-xs text-muted-foreground">{t('certificates.jobHistoryHint')}</p>
+              </div>
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-2">
+            {/* Reuse the existing hint as the ACME troubleshooting guidance next
+                to the error details; otherwise keep it above the history table. */}
+            {!certificate?.errorMessage && <p className="text-xs text-muted-foreground">{t('certificates.jobHistoryHint')}</p>}
+            <Button className="ml-auto" variant="outline" size="sm" onClick={() => void jobsQuery.refetch()} disabled={jobsQuery.isFetching}>
+              <RefreshCw className={jobsQuery.isFetching ? 'animate-spin' : ''} />
+              {t('refresh.data')}
+            </Button>
+          </div>
+          {jobsQuery.isError ? (
+            <div className="flex min-h-32 flex-col items-center justify-center gap-3 rounded-md border border-dashed text-center">
+              <p className="text-sm text-destructive">{t('certificates.jobHistoryLoadFailed')}</p>
+              <Button variant="outline" size="sm" onClick={() => void jobsQuery.refetch()}>{t('refresh.data')}</Button>
+            </div>
+          ) : jobsQuery.isPending ? (
+            <div className="space-y-2"><Skeleton className="h-10 w-full" /><Skeleton className="h-32 w-full" /></div>
+          ) : jobs.length === 0 ? (
+            <div className="flex min-h-32 flex-col items-center justify-center gap-2 rounded-md border border-dashed text-center">
+              <History className="size-5 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">{t('certificates.jobHistoryEmpty')}</p>
+            </div>
+          ) : (
+            <div className="max-h-[26rem] overflow-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('certificates.jobAction')}</TableHead>
+                    <TableHead>{t('certificates.jobStatusColumn')}</TableHead>
+                    <TableHead>{t('certificates.jobAttempts')}</TableHead>
+                    <TableHead>{t('certificates.jobCreatedAt')}</TableHead>
+                    <TableHead>{t('certificates.jobFinishedAt')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {jobs.map((job) => (
+                    <TableRow key={job.id}>
+                      <TableCell className="align-top text-sm">{jobActionLabel(t, job.action)}</TableCell>
+                      <TableCell className="align-top">
+                        <Badge variant={jobStatusVariant(job.status)}>{jobStatusLabel(t, job.status)}</Badge>
+                        {job.errorMessage && (
+                          <pre className="mt-2 max-h-40 max-w-md overflow-auto whitespace-pre-wrap break-all rounded bg-destructive/5 p-2 font-mono text-xs text-destructive">{job.errorMessage}</pre>
+                        )}
+                      </TableCell>
+                      <TableCell className="align-top font-mono text-sm">{job.attempts}</TableCell>
+                      <TableCell className="align-top text-sm text-muted-foreground">{formatTimestamp(job.createdAt)}</TableCell>
+                      <TableCell className="align-top text-sm text-muted-foreground">{formatTimestamp(job.finishedAt)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+        <DialogFooter className={certificate?.serverId ? 'flex-col sm:flex-row sm:justify-between' : undefined}>
+          {certificate?.serverId && (
+            <Button variant="outline" onClick={openServerLogs}>
+              <ScrollText className="size-4" />
+              {t('certificates.viewServerLogs')}
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => setOpen(false)}>{t('certificates.close')}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function CertificatesContent() {
   const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
   const [keyword, setKeyword] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<ManagedCertificate>()
+  const [jobsDialogOpen, setJobsDialogOpen] = useState(false)
+  const [jobsCertificate, setJobsCertificate] = useState<ManagedCertificate>()
 
   const certificatesQuery = useQuery({
     queryKey: ['managedCertificates', keyword],
@@ -211,6 +352,11 @@ function CertificatesContent() {
   const openEdit = (certificate: ManagedCertificate) => {
     setEditing(certificate)
     setDialogOpen(true)
+  }
+
+  const openJobs = (certificate: ManagedCertificate) => {
+    setJobsCertificate(certificate)
+    setJobsDialogOpen(true)
   }
 
   return (
@@ -276,12 +422,18 @@ function CertificatesContent() {
                     </TableCell>
                     <TableCell className="font-mono text-sm">{certificate.serverId}</TableCell>
                     <TableCell className="text-sm">{certificate.challenge}</TableCell>
-                    <TableCell><Badge variant={statusVariant(certificate.status)}>{statusLabel(t, certificate.status)}</Badge></TableCell>
+                    <TableCell>
+                      <Badge variant={statusVariant(certificate.status)}>{statusLabel(t, certificate.status)}</Badge>
+                      {certificate.errorMessage && (
+                        <div className="mt-1 max-w-56 truncate text-xs text-destructive" title={certificate.errorMessage}>{certificate.errorMessage}</div>
+                      )}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{formatDate(certificate.expiresAt, t('certificates.notIssued'), i18n.language)}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="icon" title={t('certificates.edit')} onClick={() => openEdit(certificate)}><Pencil className="size-4" /></Button>
                         <Button variant="ghost" size="icon" title={t('certificates.request')} disabled={requestMutation.isPending} onClick={() => requestMutation.mutate(certificate.id)}><RefreshCw className="size-4" /></Button>
+                        <Button variant="ghost" size="icon" title={t('certificates.viewRequests')} onClick={() => openJobs(certificate)}><History className="size-4" /></Button>
                         <Button variant="ghost" size="icon" title={t('certificates.delete')} disabled={deleteMutation.isPending} onClick={() => {
                           if (window.confirm(t('certificates.confirmDelete'))) deleteMutation.mutate(certificate.id)
                         }}><Trash2 className="size-4 text-destructive" /></Button>
@@ -295,6 +447,7 @@ function CertificatesContent() {
         )}
 
         <CertificateDialog open={dialogOpen} setOpen={setDialogOpen} certificate={editing} onSaved={refresh} />
+        <CertificateJobsDialog open={jobsDialogOpen} setOpen={setJobsDialogOpen} certificate={jobsCertificate} />
       </main>
     </RootLayout>
   )

@@ -23,11 +23,7 @@ const maxCertificateFileSize = 2 * 1024 * 1024
 // scanner only reads PEM certificates and returns metadata to Master. The
 // default Docker Compose layout mounts Caddy's data directory at /data.
 func ScanCertificates(dataDir string) ([]*pb.CaddyCertificateStatus, error) {
-	dataDir = strings.TrimSpace(dataDir)
-	if dataDir == "" {
-		dataDir = "/data"
-	}
-	roots := certificateRoots(dataDir)
+	roots := certificateRoots(caddyDataDir(dataDir))
 	seenRoots := make(map[string]struct{}, len(roots))
 	items := make(map[string]*pb.CaddyCertificateStatus)
 	var firstErr error
