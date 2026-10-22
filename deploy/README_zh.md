@@ -1,61 +1,129 @@
-# 本地构建部署教程
+# Docker 部署教程
 
-本文默认使用 Docker Hub 镜像部署：镜像发布者为 `lujuya`，仓库为 `lujuya/frp-web-panel`。Master、Server、Client 使用同一个镜像和 tag；也可以在每台主机本地构建后使用本地镜像。
+本文使用 Docker Hub 上的官方镜像 `lujuya/frp-web-panel` 部署，不需要克隆源码或本地构建。Master、Server、Client 使用同一个镜像，通过启动参数区分角色。
 
-脚本默认按当前源码 commit 自动生成 `local-<commit>` tag，并在本机加载时同时打上 `latest`。Master 生成的节点 Compose 固定使用 `latest`，因此节点可直接 `docker compose pull` 或本地构建后启动；需要固定版本时把 Compose 中的 `image` 改成 `lujuya/frp-web-panel:<tag>`。Master 部署完成后记下输出的 `Source commit` 和 `Image tag`，它们仍可用于排错和回滚。
+部署分两步：
+
+1. 在 Master 主机用一份 Compose 文件部署 Master。
+2. 在 Master 网页创建节点，把网页生成的 Compose 文件保存到各节点主机启动。
+
+如果需要固定版本以便回滚，把 Compose 中的 `latest` 换成具体 tag，例如 `lujuya/frp-web-panel:local-e5fb9832191e`。
 
 ## 部署前准备
 
-所有主机安装 Linux Docker Engine 和 Docker Compose v2。使用 Docker Hub 私有仓库时，在需要拉取的主机执行 `docker login`；公开仓库无需登录。需要本地构建时，Master 和 Server/Client 主机还需要 Git、OpenSSL 和 Docker Buildx。
+所有主机安装 Linux Docker Engine 和 Docker Compose v2（`docker compose` 命令）。公开仓库无需登录即可拉取镜像。
 
-浏览器需要能访问 Master Web/API；Server 和 Client 需要能访问 Master API 与 RPC。默认端口为 `9000/tcp`（Web/API）和 `9001/tcp`（RPC），按实际网络路径在主机防火墙、云安全组和路由器中放行。Server/Client 使用 Linux host 网络模式。
+浏览器需要能访问 Master Web/API；Server 和 Client 需要能访问 Master API 与 RPC。默认端口为 `9000/tcp`（Web/API）和 `9001/tcp`（RPC），按实际网络路径在主机防火墙、云安全组和路由器中放行。
 
-## 1. 克隆源码并部署 Master
+Server/Client 使用 Linux host 网络模式，直接占用宿主机端口。Server 上的 Caddy 还需要独占 `80/tcp` 和 `443/tcp`。
 
-在 Master 主机执行：
+## 1. 部署 Master
 
-```bash
-git clone --branch main https://github.com/yunj-yun/frp-web-panel.git
-cd frp-web-panel
-sudo ./scripts/deploy-master.sh
-```
-
-脚本会按当前源码 commit 自动命名 tag，在当前主机构建并加载镜像（同时打上供节点 Compose 使用的 `latest` tag），然后启动 Master，不会拉取或推送项目镜像。部署成功后会打印 `Source commit`、`Image tag`、节点镜像 tag 和可直接复制到节点执行的源码构建命令。
-
-脚本默认从主机默认路由探测 IPv4 地址作为 Master API/RPC 地址，不要求域名。这个 IP 必须能被浏览器和 Server/Client 主机访问；首次启动后脚本会输出 `Web UI` 地址。要使用域名时，可在首次部署命令增加：
+### 创建目录并生成密钥
 
 ```bash
-sudo ./scripts/deploy-master.sh --domain panel.example.com
+sudo mkdir -p /opt/frp-panel
+cd /opt/frp-panel
+openssl rand -hex 32
 ```
 
-`--domain` 只设置主机名，DNS 和 HTTPS 反向代理需另行配置。Web/API 默认监听宿主机 `9000/tcp`，RPC 监听 `9001/tcp`。
+最后一条命令输出的十六进制字符串就是 `APP_GLOBAL_SECRET`，用于加密节点凭据。请保存好：重装 Master 时必须沿用同一个值，否则已有节点需要重新创建。
 
-部署脚本会创建 `/opt/frp-panel`、SQLite 数据目录和权限为 `600` 的 `.env`，生成随机 `APP_GLOBAL_SECRET`，校验 Compose 配置并等待 Master 健康检查。打开输出的 Web UI 地址，注册的第一个用户会成为管理员。检查运行状态：
+### 写入 .env
+
+把上一步的输出替换到 `APP_GLOBAL_SECRET`，`MASTER_API_HOST` 换成浏览器和所有节点都能访问的 IP 或域名：
+
+```bash
+sudo tee /opt/frp-panel/.env >/dev/null <<'EOF'
+COMPOSE_PROJECT_NAME=frp-panel
+FRP_PANEL_CONTAINER_NAME=frp-panel-master
+FRP_PANEL_IMAGE=lujuya/frp-web-panel:latest
+MASTER_WEB_PORT=9000
+MASTER_RPC_PORT=9001
+APP_GLOBAL_SECRET=REPLACE_WITH_THE_GENERATED_SECRET
+MASTER_API_HOST=192.0.2.10
+MASTER_RPC_HOST=192.0.2.10
+MASTER_API_SCHEME=http
+CLIENT_API_URL=http://192.0.2.10:9000
+CLIENT_RPC_URL=grpc://192.0.2.10:9001
+EOF
+sudo chmod 600 /opt/frp-panel/.env
+```
+
+变量说明：
+
+| 变量 | 说明 |
+|---|---|
+| `FRP_PANEL_IMAGE` | 镜像地址；回滚时改成固定 tag |
+| `MASTER_WEB_PORT` / `MASTER_RPC_PORT` | Master 在宿主机发布的端口 |
+| `MASTER_API_HOST` | 浏览器访问 Web/API 用的地址 |
+| `MASTER_RPC_HOST` | 节点连接 RPC 用的地址 |
+| `MASTER_API_SCHEME` | `http` 或 `https`，取决于是否走反向代理 |
+| `CLIENT_API_URL` / `CLIENT_RPC_URL` | 写入节点 Compose 的连接地址，可填反向代理后的 HTTPS/WSS |
+
+### 写入 docker-compose.yml
+
+```bash
+sudo tee /opt/frp-panel/docker-compose.yml >/dev/null <<'EOF'
+name: ${COMPOSE_PROJECT_NAME:-frp-panel}
+
+services:
+  master:
+    image: ${FRP_PANEL_IMAGE:?Set FRP_PANEL_IMAGE in .env}
+    container_name: ${FRP_PANEL_CONTAINER_NAME:-frp-panel-master}
+    restart: unless-stopped
+    ports:
+      - "${MASTER_WEB_PORT:-9000}:9000/tcp"
+      - "${MASTER_RPC_PORT:-9001}:9001/tcp"
+    environment:
+      APP_GLOBAL_SECRET: ${APP_GLOBAL_SECRET:?Set APP_GLOBAL_SECRET in .env}
+      APP_ENABLE_REGISTER: "false"
+      MASTER_API_HOST: ${MASTER_API_HOST:?Set MASTER_API_HOST in .env}
+      MASTER_API_PORT: "9000"
+      MASTER_API_SCHEME: ${MASTER_API_SCHEME:-http}
+      MASTER_RPC_HOST: ${MASTER_RPC_HOST:?Set MASTER_RPC_HOST in .env}
+      MASTER_RPC_PORT: "9001"
+      CLIENT_API_URL: ${CLIENT_API_URL:?Set CLIENT_API_URL in .env}
+      CLIENT_RPC_URL: ${CLIENT_RPC_URL:?Set CLIENT_RPC_URL in .env}
+      DB_TYPE: sqlite3
+      DB_DSN: /data/data.db?_pragma=journal_mode(WAL)
+      IS_DEBUG: "false"
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:9000/login"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+EOF
+```
+
+### 启动并注册管理员
 
 ```bash
 cd /opt/frp-panel
+sudo docker compose config --quiet
+sudo docker compose pull
+sudo docker compose up -d
 sudo docker compose ps
 sudo docker compose logs --tail=100 master
 ```
 
-如果当前账户没有 Docker 权限，Docker 命令前加 `sudo`。升级和备份时保留 `.env` 与 `data/`，它们包含密钥和 SQLite 数据。
+健康检查通过后，打开 `http://<MASTER_API_HOST>:9000`。**第一个注册的用户自动成为管理员**，之后注册入口关闭（`APP_ENABLE_REGISTER: "false"`）。
 
-## 2. 在 Server/Client 主机本地构建镜像
+如果当前账户没有 Docker 权限，在 Docker 命令前加 `sudo`。
 
-在每台 Server/Client 主机终端，将 Master 部署输出中 `Node source checkout and build commands` 标题下的命令原样复制粘贴执行。命令会创建或更新独立源码目录、检出 Master 使用的完整 commit，并在本机加载镜像；构建产物同时带有 `local-<commit>` 和 `latest` 两个 tag，后者与 Master 生成的节点 Compose 一致，无需手动修改 `image`。
+## 2. 部署 Server 和 Client 节点
 
-构建脚本会自动将本机架构镜像加载到 Docker。节点之间不需要共享镜像文件，也不需要登录镜像仓库；x86_64 和 ARM 主机分别在本机执行构建即可。若当前账户没有 Docker 权限，请给 Docker 命令加 `sudo`。
+节点不需要源码，也不需要本地构建，只要能拉取镜像并访问 Master。
 
-## 3. 从 Master 取 Compose 并在节点目录启动
-
-1. 登录 Master，在 Server 或 Client 页面创建节点。
-2. 打开节点详情页，复制或下载生成的 `docker-compose.yml`。它包含节点 ID、密钥、Master 连接地址，镜像固定为 `latest` tag，节点启动或执行 `docker compose pull` 时获取最新发布镜像；版本信息仍由 Master 单独展示，便于排错。
-3. 在对应节点主机创建自己的部署目录。Server 和 Client 可使用不同目录；将复制的内容保存为 `docker-compose.yml`，文件包含节点凭据，请限制权限。
-
-Server 示例：
+1. 登录 Master，在「服务端」或「客户端」页面创建节点。
+2. 打开节点详情页，复制或下载生成的 `docker-compose.yml`。
+3. 在该节点主机创建部署目录，保存 Compose 文件：
 
 ```bash
-NODE_DIR="$HOME/frp-server"
+NODE_DIR="$HOME/frp-server"   # Client 节点改为 "$HOME/frp-client"
 mkdir -p "$NODE_DIR"
 cd "$NODE_DIR"
 umask 077
@@ -64,44 +132,90 @@ chmod 600 docker-compose.yml
 docker compose config --quiet
 ```
 
-Client 可把目录改成 `"$HOME/frp-client"`，并在该目录另存该 Client 对应的 Compose 文件。
-
-在 Compose 所在目录启动：
+4. 拉取镜像并启动：
 
 ```bash
+cd "$NODE_DIR"
+docker compose pull
 docker compose up -d
 docker compose ps
 docker compose logs --tail=100 -f
 ```
 
-Master 生成的应用服务使用 `lujuya/frp-web-panel:latest` 和 `pull_policy: always`，执行 `docker compose pull` 或 `docker compose up -d` 时会从 Docker Hub 获取最新应用镜像。Server Compose 中的官方 `caddy:2-alpine` 也会从 Docker Hub 拉取。部署目录和源码目录应分开：Server 的 Caddy 会在 Compose 当前目录创建并持久化 `./caddy`、`./caddy/data` 和 `./caddy/config`。启用 HTTPS Gateway 前，确认宿主机 80/443 端口可用；请保留 Caddy 数据目录，否则会丢失证书和续期状态。
+生成的 Compose 已包含节点 ID、连接密钥和 Master 连接地址，镜像固定为 `lujuya/frp-web-panel:latest` 并带 `pull_policy: always`，因此每次 `docker compose pull` 或 `up -d` 都会获取最新发布镜像。
 
-Caddy 由面板生成的配置自动监听 80（HTTP-01 challenge 与 HTTP 跳转）和 443，不需要在 Caddyfile 或 Compose 里手动添加端口映射；但宿主机 80/443 不能被 `frps` 的 `vhostHTTPPort` 或其他进程占用，并需要在防火墙/安全组中放行。证书申请失败时，在证书中心打开“查看请求记录”查看错误，并可跳转到目标服务端日志；Caddy 运行日志会写入 Caddy 数据目录的 `logs/caddy.log`。生成的 Server Compose 会把该目录只读挂载到 frp-panel 容器的 `/caddy-data`（Caddy 容器内仍是 `/data`），避免与 frp-panel 自身的 `/data`（SQLite 数据库）冲突。
+### Server 节点额外说明
 
-回 Master 查看节点状态，确认 Server/Client 在线、版本和心跳正常。若节点未上线，检查 Compose 日志、Compose 中的 Master 地址、节点到 Master 的 `9000/9001` 连通性，以及节点本地缓存的 `latest` 镜像是否早于当前 Master 版本（可执行 `docker compose pull` 更新）。
+Server Compose 还会启动官方 `caddy:2-alpine`，并在 Compose 所在目录持久化 `./caddy`、`./caddy/data` 和 `./caddy/config`。**请保留整个目录**，删除 Caddy 数据会丢失已签发证书和续期状态。
+
+Caddy 由面板生成的配置自动监听 80（HTTP-01 challenge 与 HTTP 跳转）和 443，不需要在 Caddyfile 或 Compose 里手动添加端口映射；但宿主机 80/443 不能被 `frps` 的 `vhostHTTPPort` 或其他进程占用，并需要在防火墙/安全组中放行。
+
+证书申请失败时，在证书中心打开「查看请求记录」查看错误，并可跳转到目标服务端日志；Caddy 运行日志会写入 Caddy 数据目录的 `logs/caddy.log`。生成的 Server Compose 会把该目录只读挂载到 frp-panel 容器的 `/caddy-data`（Caddy 容器内仍是 `/data`），避免与 frp-panel 自身的 `/data`（SQLite 数据库）冲突。
+
+### 排查节点未上线
+
+回 Master 确认节点在线、版本和心跳正常。若节点未上线，依次检查：
+
+- Compose 日志：`docker compose logs --tail=100 -f`
+- 节点能否访问 `MASTER_API_HOST:9000` 和 `MASTER_RPC_HOST:9001`
+- 防火墙或安全组是否放行 9000、9001
+- 节点本地 `latest` 镜像是否过期：`docker compose pull`
 
 ## 升级
 
-在 Master 代码目录更新到新的 `main` commit 并本地重建部署：
+Master 和节点都通过拉取新镜像升级：
 
 ```bash
-git pull --ff-only
-sudo ./scripts/deploy-master.sh
+# Master 主机
+cd /opt/frp-panel
+sudo docker compose pull
+sudo docker compose up -d
+
+# 每台 Server/Client 节点
+cd "$NODE_DIR"
+docker compose pull
+docker compose up -d
 ```
 
-Master 脚本会打印新的节点源码构建命令。在每台 Server/Client 主机复制执行，再在 Master 为节点重新生成 Compose，替换对应节点目录中的文件，最后执行 `docker compose up -d`。应用服务只使用本地镜像；Server 的 Caddy 镜像会按需拉取。升级前备份 `/opt/frp-panel/.env` 和 `/opt/frp-panel/data/`；保留 Master 中的节点记录以及 Server 的 Caddy 数据目录。
+升级前备份 Master 的 `.env` 和 `data/`，以及各节点的 Caddy 数据目录。
 
-## 可选参数
+如果新版修改了节点 Compose 结构（例如挂载路径或启动参数），需要回 Master 为节点**重新生成 Compose**、替换节点目录中的旧文件，再执行 `docker compose up -d`。仅执行 `pull` 不会更新 Compose 文件本身。
 
-常规部署无需传参。需要调整时，可在命令后增加相应选项：
+回滚到固定版本时，把 Compose 中的 `image` 改成具体 tag：
 
-- `--domain <域名>`：设置 Master 的 API/RPC 主机名；默认自动探测 IP。它等价于 `--api-host <IP/域名>`。
-- `--rpc-host <IP/域名>`：单独设置 RPC 主机名；默认与 API 主机名相同。
-- `--client-api-url <URL>`、`--client-rpc-url <URL>`：覆盖节点访问 Master 的 API 和 RPC 地址；反向代理时可分别设置为 HTTPS 和 WSS 地址。
-- `--web-port <端口>`、`--rpc-port <端口>`：修改 Web/API 和 RPC 端口，默认分别为 `9000`、`9001`。
-- `--dir <目录>`：修改 Master 部署目录，默认 `/opt/frp-panel`。
-- `--tag <标签>`：覆盖默认的 `local-<commit>` 镜像标签；Master 输出的节点构建命令会带上同一个标签。
-- `--no-build --tag <标签>`：不在 Master 本地构建，默认从镜像仓库拉取该标签。若镜像已提前加载到本机，可再加 `--skip-pull`；常规源码部署不需要这些参数。
-- `scripts/build-image.sh --platform <平台>`：构建指定架构；发布 Docker Hub 时使用 `--push`，例如 `scripts/build-image.sh --tag local-<commit> --platform linux/amd64 --push`。
+```yaml
+image: lujuya/frp-web-panel:local-e5fb9832191e
+```
 
-完整选项和环境变量可分别通过 `scripts/deploy-master.sh --help` 与 `scripts/build-image.sh --help` 查看。
+## 反向代理和域名
+
+Master 默认用 IP 直连。使用域名或反向代理时：
+
+1. 在 `.env` 中把 `MASTER_API_HOST` 和 `MASTER_RPC_HOST` 改成域名。
+2. 把 `CLIENT_API_URL` 和 `CLIENT_RPC_URL` 改成节点真正访问的地址，例如 `https://panel.example.com` 和 `wss://panel.example.com`。
+3. 把 `MASTER_API_SCHEME` 改成 `https`。
+4. 执行 `sudo docker compose up -d` 重建容器。
+
+DNS 解析和反向代理（Nginx、Caddy 等）需自行配置。Web/API 走普通 HTTP 反向代理即可；RPC 需要支持 WebSocket 升级。
+
+## 从源码构建（可选）
+
+需要修改代码或自行构建镜像时才需要源码：
+
+```bash
+git clone --branch main https://github.com/yunj-yun/frp-web-panel.git
+cd frp-web-panel
+./scripts/build-image.sh
+```
+
+脚本按当前源码 commit 生成 `local-<commit>` tag，本地加载时同时打上 `latest`，与 Master 生成的节点 Compose 一致。
+
+发布到 Docker Hub 需要先 `docker login`，再用 `--push`；配合 `--latest` 可同时更新 `latest`：
+
+```bash
+./scripts/build-image.sh --tag local-<commit> --platform linux/amd64 --push --latest
+```
+
+`scripts/deploy-master.sh` 保留为源码部署的便捷封装：它会构建并加载镜像、生成 `.env` 和 Compose、等待健康检查。它要求在一个干净的 Git 源码目录中运行。常规 Docker 部署按上文手动写 Compose 即可，不需要这个脚本。
+
+完整选项可分别通过 `scripts/deploy-master.sh --help` 与 `scripts/build-image.sh --help` 查看。
